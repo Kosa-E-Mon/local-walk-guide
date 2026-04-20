@@ -6,29 +6,31 @@
 <meta name="theme-color" content="#1C1A16">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="増田まち歩き">
-<title>増田まち歩きガイド</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-title" content="まち歩き">
+<title>まち歩きガイド</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
+/* ══ CSS変数（configから動的に上書き） ══ */
 :root {
   --bg: #F4EFE4;
   --paper: #FAF7F1;
   --ink: #1C1A16;
-  --vermillion: #B83232;
+  --primary: #B83232;
   --gold: #9A7A3A;
   --muted: #7A7060;
   --border: #D4C9B0;
   --green: #3A7A4A;
   --orange: #C87020;
   --radius: 12px;
+  --font-title: 'Noto Serif JP', serif;
+  --font-body: 'Noto Sans JP', sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 body {
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--ink);
   min-height: 100vh;
@@ -38,369 +40,283 @@ body {
 }
 
 .screen { display: none; min-height: 100vh; flex-direction: column; }
-.screen.active { display: flex; animation: fadeIn 0.35s ease; }
+.screen.active { display: flex; animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
 /* ══ LOADING ══ */
 #screen-loading {
   background: var(--ink);
   align-items: center; justify-content: center;
-  flex-direction: column; gap: 24px;
+  flex-direction: column; gap: 20px;
 }
-.loading-logo { font-family:'Noto Serif JP',serif; font-size:32px; font-weight:700; color:#FAF7F1; letter-spacing:.08em; }
-.loading-sub { font-size:11px; color:rgba(250,247,241,.4); letter-spacing:.2em; }
-.loading-dots { display:flex; gap:8px; }
-.loading-dot {
-  width:8px; height:8px; border-radius:50%; background:var(--vermillion);
-  animation: dotPulse 1.2s ease-in-out infinite;
-}
-.loading-dot:nth-child(2){animation-delay:.2s}
-.loading-dot:nth-child(3){animation-delay:.4s}
+.loading-logo { font-family: var(--font-title); font-size: 30px; font-weight: 700; color: #FAF7F1; letter-spacing: .08em; }
+.loading-sub { font-size: 10px; color: rgba(250,247,241,.35); letter-spacing: .2em; }
+.loading-dots { display: flex; gap: 8px; }
+.loading-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); animation: dotPulse 1.2s ease-in-out infinite; }
+.loading-dot:nth-child(2){animation-delay:.2s} .loading-dot:nth-child(3){animation-delay:.4s}
 @keyframes dotPulse { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
-.loading-msg { font-size:12px; color:rgba(250,247,241,.35); letter-spacing:.08em; }
-.loading-error {
-  background:rgba(184,50,50,.15); border:1px solid rgba(184,50,50,.3);
-  border-radius:8px; padding:16px 20px; text-align:center;
-  font-size:12px; color:rgba(250,247,241,.7); line-height:1.8;
-  max-width:300px;
-}
-.btn-retry {
-  margin-top:12px; background:var(--vermillion); color:white; border:none;
-  padding:10px 24px; border-radius:4px; font-size:13px; cursor:pointer;
-  letter-spacing:.08em;
-}
+.loading-msg { font-size: 11px; color: rgba(250,247,241,.3); letter-spacing: .08em; }
+.loading-error { background: rgba(184,50,50,.15); border: 1px solid rgba(184,50,50,.3); border-radius: 8px; padding: 16px 20px; text-align: center; font-size: 12px; color: rgba(250,247,241,.7); line-height: 1.8; max-width: 300px; display: none; }
+.btn-retry { margin-top: 12px; background: var(--primary); color: white; border: none; padding: 10px 24px; border-radius: 4px; font-size: 13px; cursor: pointer; }
 
-/* ══ COURSES ══ */
-#screen-courses { background:var(--ink); }
-.courses-header {
-  padding:40px 28px 24px; position:relative;
-  background: linear-gradient(180deg,#1C1A16 0%,#241E18 100%);
-}
-.courses-header::after {
-  content:''; position:absolute; inset:0;
-  background-image:repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(255,255,255,.015) 20px,rgba(255,255,255,.015) 21px);
-  pointer-events:none;
-}
-.courses-badge {
-  display:inline-block; border:1px solid var(--vermillion);
-  color:var(--vermillion); font-size:10px; letter-spacing:.25em;
-  padding:3px 12px; margin-bottom:20px; position:relative; z-index:1;
-}
-.courses-title {
-  font-family:'Noto Serif JP',serif; font-size:32px; font-weight:700;
-  color:#FAF7F1; line-height:1.2; letter-spacing:.05em;
-  position:relative; z-index:1; margin-bottom:4px;
-}
-.courses-subtitle { font-size:12px; color:rgba(250,247,241,.35); letter-spacing:.1em; position:relative; z-index:1; }
+/* ══ HOME ══ */
+#screen-home { background: var(--ink); }
 
-.courses-body { padding:20px; flex:1; overflow-y:auto; }
-.courses-section-label {
-  font-size:10px; color:rgba(250,247,241,.35); letter-spacing:.2em;
-  text-transform:uppercase; margin-bottom:10px;
+.home-header {
+  padding: 40px 24px 24px;
+  position: relative; overflow: hidden;
+  background: linear-gradient(180deg, #1C1A16 0%, #241E18 100%);
+  min-height: 180px; display: flex; flex-direction: column; justify-content: flex-end;
 }
+.home-header-bg {
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,.018) 20px, rgba(255,255,255,.018) 21px);
+  pointer-events: none;
+}
+.home-header-img { position: absolute; inset: 0; object-fit: cover; width: 100%; height: 100%; opacity: .35; }
+.home-header-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(28,26,22,.95) 0%, rgba(28,26,22,.3) 100%); }
+.home-badge { display: inline-block; border: 1px solid var(--primary); color: var(--primary); font-size: 9px; letter-spacing: .25em; padding: 3px 10px; margin-bottom: 12px; position: relative; z-index: 1; }
+.home-title { font-family: var(--font-title); font-size: 30px; font-weight: 700; color: #FAF7F1; line-height: 1.2; letter-spacing: .05em; position: relative; z-index: 1; margin-bottom: 3px; }
+.home-subtitle { font-size: 11px; color: rgba(250,247,241,.35); letter-spacing: .1em; position: relative; z-index: 1; }
+
+.home-body { flex: 1; overflow-y: auto; padding: 16px; }
+
+.home-section-label { font-size: 10px; color: rgba(250,247,241,.3); letter-spacing: .2em; text-transform: uppercase; margin-bottom: 8px; margin-top: 16px; }
+.home-section-label:first-child { margin-top: 0; }
+
+/* コースカード */
 .course-card {
-  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
-  border-radius:var(--radius); padding:16px; margin-bottom:10px;
-  cursor:pointer; transition:border-color .2s, background .2s;
-  position:relative; overflow:hidden;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--radius); padding: 14px; margin-bottom: 8px;
+  cursor: pointer; transition: border-color .2s, background .2s; position: relative; overflow: hidden;
 }
-.course-card:active { background:rgba(255,255,255,.1); }
-.course-card.recommended { border-color:rgba(184,50,50,.5); }
-.course-card.completed { border-color:rgba(154,122,58,.4); }
+.course-card:active { background: rgba(255,255,255,.1); }
+.course-card.recommended { border-color: rgba(184,50,50,.45); }
+.course-card.completed { border-color: rgba(154,122,58,.4); }
+.course-card.masuda-recommend { border-color: rgba(154,122,58,.3); background: rgba(154,122,58,.05); }
 
-.course-card-rec {
-  position:absolute; top:0; right:0;
-  background:var(--vermillion); color:white;
-  font-size:9px; letter-spacing:.12em;
-  padding:3px 10px; border-radius:0 var(--radius) 0 6px;
-}
-.course-card-done {
-  position:absolute; top:0; right:0;
-  background:var(--gold); color:white;
-  font-size:9px; letter-spacing:.12em;
-  padding:3px 10px; border-radius:0 var(--radius) 0 6px;
-}
+.course-card-tag { position: absolute; top: 0; right: 0; font-size: 9px; letter-spacing: .1em; padding: 3px 10px; border-radius: 0 var(--radius) 0 6px; }
+.tag-rec { background: var(--primary); color: white; }
+.tag-done { background: var(--gold); color: white; }
+.tag-masuda { background: rgba(154,122,58,.6); color: white; }
 
-.course-card-type {
-  font-size:10px; color:rgba(250,247,241,.4); letter-spacing:.12em;
-  margin-bottom:6px;
-}
-.course-card-name {
-  font-family:'Noto Serif JP',serif; font-size:18px; font-weight:700;
-  color:#FAF7F1; margin-bottom:8px;
-}
-.course-card-meta {
-  display:flex; gap:14px; font-size:11px;
-  color:rgba(250,247,241,.45); letter-spacing:.06em;
-}
-.course-card-period {
-  font-size:10px; color:var(--orange); margin-top:6px; letter-spacing:.06em;
-}
+.course-card-type { font-size: 10px; color: rgba(250,247,241,.35); letter-spacing: .1em; margin-bottom: 4px; }
+.course-card-name { font-family: var(--font-title); font-size: 17px; font-weight: 700; color: #FAF7F1; margin-bottom: 6px; }
+.course-card-meta { display: flex; gap: 12px; font-size: 11px; color: rgba(250,247,241,.4); }
+.course-card-period { font-size: 10px; color: var(--orange); margin-top: 5px; }
 
-.btn-prizes-top {
-  margin:0 0 16px; background:transparent;
-  border:1px solid rgba(250,247,241,.15);
-  color:rgba(250,247,241,.4); padding:12px;
-  font-size:12px; letter-spacing:.1em;
-  border-radius:4px; cursor:pointer;
-  transition:all .2s; width:100%;
+/* エリア切り替えカード */
+.area-card {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+  transition: background .2s;
 }
-.btn-prizes-top:active { border-color:var(--gold); color:var(--gold); }
+.area-card:active { background: rgba(255,255,255,.09); }
+.area-card-icon { font-size: 24px; }
+.area-card-info { flex: 1; }
+.area-card-name { font-size: 14px; color: rgba(250,247,241,.8); font-weight: 500; margin-bottom: 2px; }
+.area-card-desc { font-size: 10px; color: rgba(250,247,241,.3); letter-spacing: .04em; }
+.area-card-arrow { font-size: 14px; color: rgba(250,247,241,.2); }
+.area-card.home-area { border-color: rgba(154,122,58,.3); }
+.area-card.fav-area { border-color: rgba(58,122,74,.25); }
 
-.credit {
-  text-align:center; padding:16px;
-  font-size:10px; color:rgba(250,247,241,.2);
-  letter-spacing:.08em; line-height:1.8;
+.btn-prizes-home {
+  width: 100%; background: transparent; border: 1px solid rgba(250,247,241,.15);
+  color: rgba(250,247,241,.45); padding: 12px; font-size: 12px;
+  letter-spacing: .1em; border-radius: 4px; cursor: pointer; margin-top: 4px;
+  transition: all .2s;
 }
+.btn-prizes-home:active { border-color: var(--gold); color: var(--gold); }
+
+.credit { text-align: center; padding: 16px 0 4px; font-size: 10px; color: rgba(250,247,241,.18); letter-spacing: .06em; line-height: 1.8; }
 
 /* ══ NAV ══ */
-#screen-nav { background:var(--bg); }
+#screen-nav { background: var(--bg); }
 
-.nav-header {
-  background:var(--paper); border-bottom:1px solid var(--border);
-  padding:12px 20px 10px;
-}
-.nav-progress-bar { height:3px; background:var(--border); border-radius:2px; margin-bottom:9px; overflow:hidden; }
-.nav-progress-fill { height:100%; background:var(--vermillion); border-radius:2px; transition:width .5s ease; }
-.nav-top-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
-.nav-step-label { font-size:10px; color:var(--muted); letter-spacing:.15em; }
-.gps-status { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--muted); }
-.gps-dot { width:7px; height:7px; border-radius:50%; background:#ccc; transition:background .3s; }
-.gps-dot.searching { background:#f0a040; animation:blink 1s infinite; }
-.gps-dot.active { background:var(--green); }
-.gps-dot.error { background:var(--vermillion); }
+.nav-header { background: var(--paper); border-bottom: 1px solid var(--border); padding: 12px 20px 10px; }
+.nav-progress-bar { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+.nav-progress-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width .5s ease; }
+.nav-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.nav-step-label { font-size: 10px; color: var(--muted); letter-spacing: .15em; }
+.gps-status { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
+.gps-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; transition: background .3s; }
+.gps-dot.searching { background: #f0a040; animation: blink 1s infinite; }
+.gps-dot.active { background: var(--green); }
+.gps-dot.error { background: var(--primary); }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-.nav-spot-name { font-family:'Noto Serif JP',serif; font-size:20px; font-weight:700; color:var(--ink); }
+.nav-spot-name { font-family: var(--font-title); font-size: 20px; font-weight: 700; color: var(--ink); }
 
 /* 距離パネル */
-.distance-panel {
-  margin:12px 20px 0; background:var(--paper);
-  border:1px solid var(--border); border-radius:var(--radius);
-  padding:12px 16px; display:flex; align-items:center; gap:12px;
-  transition:border-color .4s, background .4s;
-}
-.distance-panel.near { border-color:#f0a040; background:#fffbf0; }
-.distance-panel.arrived { border-color:var(--green); background:#f0fff4; }
-.dist-icon { font-size:26px; }
-.dist-info { flex:1; }
-.dist-number { font-family:'Noto Serif JP',serif; font-size:26px; font-weight:700; color:var(--ink); line-height:1; }
-.dist-number span { font-size:12px; font-family:'Noto Sans JP',sans-serif; font-weight:400; margin-left:3px; color:var(--muted); }
-.dist-status { font-size:11px; color:var(--muted); margin-top:3px; letter-spacing:.04em; }
-
-.ring-wrap { position:relative; width:48px; height:48px; flex-shrink:0; }
-.ring-svg { transform:rotate(-90deg); }
-.ring-bg { fill:none; stroke:var(--border); stroke-width:4; }
-.ring-fill { fill:none; stroke:var(--vermillion); stroke-width:4; stroke-linecap:round; stroke-dasharray:126; stroke-dashoffset:126; transition:stroke-dashoffset .6s ease, stroke .4s; }
-.ring-label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:8px; color:var(--muted); }
+.distance-panel { margin: 10px 20px 0; background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 12px; transition: border-color .4s, background .4s; }
+.distance-panel.near { border-color: #f0a040; background: #fffbf0; }
+.distance-panel.arrived { border-color: var(--green); background: #f0fff4; }
+.dist-icon { font-size: 24px; }
+.dist-info { flex: 1; }
+.dist-number { font-family: var(--font-title); font-size: 24px; font-weight: 700; color: var(--ink); line-height: 1; }
+.dist-number span { font-size: 11px; font-weight: 400; margin-left: 2px; color: var(--muted); }
+.dist-status { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: .04em; }
+.ring-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+.ring-svg { transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: var(--border); stroke-width: 4; }
+.ring-fill { fill: none; stroke: var(--primary); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 113; stroke-dashoffset: 113; transition: stroke-dashoffset .6s ease, stroke .4s; }
+.ring-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: var(--muted); }
 
 /* 歩行距離 */
-.walk-distance-bar {
-  margin:8px 20px 0; background:var(--paper);
-  border:1px solid var(--border); border-radius:8px;
-  padding:8px 14px; display:flex; align-items:center; gap:10px;
-  font-size:11px; color:var(--muted);
-}
-.walk-dist-val { font-family:'Noto Serif JP',serif; font-size:15px; color:var(--ink); font-weight:600; margin-left:auto; }
+.walk-bar { margin: 8px 20px 0; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.walk-val { font-family: var(--font-title); font-size: 14px; color: var(--ink); font-weight: 600; margin-left: auto; }
 
-/* 施設通知 */
-.facility-toast {
-  margin:8px 20px 0; background:rgba(200,112,32,.1);
-  border:1px solid rgba(200,112,32,.3); border-radius:8px;
-  padding:9px 14px; font-size:11px; color:var(--orange);
-  display:none; align-items:center; gap:8px; line-height:1.5;
-}
-.facility-toast.show { display:flex; animation:fadeIn .3s ease; }
+/* 施設トースト */
+.facility-toast { margin: 7px 20px 0; background: rgba(200,112,32,.1); border: 1px solid rgba(200,112,32,.3); border-radius: 8px; padding: 8px 13px; font-size: 11px; color: var(--orange); display: none; align-items: center; gap: 8px; line-height: 1.5; }
+.facility-toast.show { display: flex; animation: fadeIn .3s ease; }
 
 /* 音声ログ */
-.voice-log {
-  margin:8px 20px 0; background:rgba(58,122,74,.07);
-  border:1px solid rgba(58,122,74,.18); border-radius:8px;
-  padding:9px 14px; font-size:11px; color:var(--green);
-  min-height:34px; display:flex; align-items:center; gap:8px;
-  letter-spacing:.04em; line-height:1.5;
-}
+.voice-log { margin: 7px 20px 0; background: rgba(58,122,74,.07); border: 1px solid rgba(58,122,74,.18); border-radius: 8px; padding: 8px 13px; font-size: 11px; color: var(--green); min-height: 32px; display: flex; align-items: center; gap: 8px; letter-spacing: .04em; line-height: 1.5; }
 
-/* Leafletマップ */
-.map-container {
-  margin:8px 20px 0; border-radius:var(--radius);
-  overflow:hidden; border:1px solid var(--border); height:170px;
+/* マップ */
+.map-container { margin: 8px 20px 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); height: 160px; position: relative; }
+#leaflet-map { width: 100%; height: 100%; }
+
+/* ARボタン */
+.btn-ar {
+  position: absolute; top: 8px; right: 8px; z-index: 1000;
+  background: var(--ink); color: white; border: none;
+  padding: 6px 12px; border-radius: 20px; font-size: 11px;
+  letter-spacing: .08em; cursor: pointer; display: none;
+  align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(0,0,0,.3);
 }
-#leaflet-map { width:100%; height:100%; }
+.btn-ar.show { display: flex; }
 
 /* スポットドット */
-.spots-row { display:flex; justify-content:center; align-items:flex-start; padding:10px 16px 0; }
-.spot-dot-wrap { display:flex; flex-direction:column; align-items:center; flex:1; }
-.dot-line-row { display:flex; align-items:center; width:100%; }
-.dot-line { height:2px; background:var(--border); flex:1; transition:background .4s; }
-.dot-line.done { background:var(--vermillion); }
-.spot-dot {
-  width:28px; height:28px; border-radius:50%; background:#C8C0B0;
-  display:flex; align-items:center; justify-content:center;
-  font-family:'Noto Serif JP',serif; font-size:11px; font-weight:600;
-  color:white; flex-shrink:0; transition:background .3s, transform .3s; position:relative; z-index:1;
-}
-.spot-dot.done { background:var(--gold); }
-.spot-dot.current { background:var(--vermillion); transform:scale(1.15); }
-.spot-dot-label { font-size:9px; color:var(--muted); margin-top:4px; text-align:center; max-width:55px; line-height:1.3; }
+.spots-row { display: flex; justify-content: center; align-items: flex-start; padding: 10px 14px 0; }
+.spot-dot-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.dot-line-row { display: flex; align-items: center; width: 100%; }
+.dot-line { height: 2px; background: var(--border); flex: 1; transition: background .4s; }
+.dot-line.done { background: var(--primary); }
+.spot-dot { width: 26px; height: 26px; border-radius: 50%; background: #C8C0B0; display: flex; align-items: center; justify-content: center; font-family: var(--font-title); font-size: 11px; font-weight: 600; color: white; flex-shrink: 0; transition: background .3s, transform .3s; position: relative; z-index: 1; }
+.spot-dot.done { background: var(--gold); }
+.spot-dot.current { background: var(--primary); transform: scale(1.15); }
+.spot-dot-label { font-size: 9px; color: var(--muted); margin-top: 3px; text-align: center; max-width: 52px; line-height: 1.3; }
 
-/* ボタン */
-.arrive-section { padding:10px 20px 20px; display:flex; flex-direction:column; gap:8px; margin-top:auto; }
-.btn-arrived {
-  background:var(--paper); border:2px solid var(--ink); color:var(--ink);
-  padding:14px; font-family:'Noto Serif JP',serif; font-size:14px;
-  letter-spacing:.12em; border-radius:var(--radius); cursor:pointer; width:100%;
-  transition:background .2s, color .2s;
-}
-.btn-arrived:active { background:var(--ink); color:var(--paper); }
-.manual-hint { font-size:10px; color:var(--muted); text-align:center; letter-spacing:.06em; }
+.arrive-section { padding: 10px 20px 20px; display: flex; flex-direction: column; gap: 7px; margin-top: auto; }
+.btn-arrived { background: var(--paper); border: 2px solid var(--ink); color: var(--ink); padding: 13px; font-family: var(--font-title); font-size: 14px; letter-spacing: .12em; border-radius: var(--radius); cursor: pointer; width: 100%; transition: background .2s, color .2s; }
+.btn-arrived:active { background: var(--ink); color: var(--paper); }
+.manual-hint { font-size: 10px; color: var(--muted); text-align: center; }
+
+/* ══ AR画面 ══ */
+#screen-ar { background: #000; position: relative; }
+#ar-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ar-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.ar-arrow { font-size: 80px; animation: arPulse 1.5s ease-in-out infinite; }
+@keyframes arPulse { 0%,100%{transform:scale(1);opacity:.9} 50%{transform:scale(1.1);opacity:1} }
+.ar-info { background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.2); border-radius: 12px; padding: 12px 24px; text-align: center; margin-top: 16px; }
+.ar-spot-name { font-family: var(--font-title); font-size: 20px; font-weight: 700; color: white; margin-bottom: 4px; }
+.ar-dist { font-size: 28px; font-weight: 700; color: var(--primary); font-family: var(--font-title); }
+.ar-dist span { font-size: 14px; color: rgba(255,255,255,.6); }
+.btn-ar-close { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.3); color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; pointer-events: all; z-index: 10; }
+.ar-compass { position: absolute; top: 20px; left: 20px; font-size: 11px; color: rgba(255,255,255,.5); background: rgba(0,0,0,.5); padding: 6px 12px; border-radius: 20px; }
 
 /* ══ EXPLAIN ══ */
-#screen-explain { background:var(--bg); }
-
-.photo-area {
-  width:100%; aspect-ratio:16/9; background:#2A2720;
-  position:relative; overflow:hidden;
-  user-select:none; -webkit-user-select:none;
-}
-.photo-area img { width:100%; height:100%; object-fit:cover; pointer-events:none; -webkit-user-drag:none; display:block; }
-.photo-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:rgba(255,255,255,.2); font-size:12px; letter-spacing:.1em; }
-.photo-placeholder-icon { font-size:28px; opacity:.25; }
-.photo-protect { position:absolute; inset:0; background:transparent; z-index:10; }
-
-.explain-header {
-  background:var(--ink); color:var(--paper);
-  padding:18px 24px 16px; position:relative; overflow:hidden;
-}
-.explain-num-bg { position:absolute; right:14px; top:4px; font-family:'Noto Serif JP',serif; font-size:64px; font-weight:700; color:rgba(255,255,255,.05); line-height:1; }
-.explain-badge { font-size:10px; letter-spacing:.2em; color:var(--vermillion); border:1px solid var(--vermillion); padding:2px 10px; display:inline-block; margin-bottom:8px; }
-.explain-title { font-family:'Noto Serif JP',serif; font-size:24px; font-weight:700; line-height:1.3; position:relative; z-index:1; margin-bottom:10px; }
-.btn-voice-replay {
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
-  color:rgba(250,247,241,.7); padding:6px 14px; border-radius:20px;
-  font-size:11px; letter-spacing:.08em; cursor:pointer;
-  display:inline-flex; align-items:center; gap:5px; transition:background .2s;
-}
-.btn-voice-replay:active { background:rgba(255,255,255,.15); }
-
-.explain-body { padding:18px 20px 0; flex:1; overflow-y:auto; }
-.explain-text { font-size:14px; line-height:2.0; color:var(--ink); letter-spacing:.04em; margin-bottom:18px; white-space:pre-wrap; }
-.explain-divider { border:none; border-top:1px solid var(--border); margin:12px 0; }
-.explain-sub { font-size:10px; color:var(--muted); letter-spacing:.15em; text-transform:uppercase; margin-bottom:8px; }
-.explain-keyword {
-  display:inline-block; background:var(--paper); border:1px solid var(--border);
-  font-size:11px; color:var(--gold); padding:3px 10px; border-radius:20px;
-  margin:2px 3px 2px 0; letter-spacing:.04em;
-}
-
-.btn-next {
-  margin:14px 20px 24px; background:var(--vermillion); color:white; border:none;
-  padding:15px; font-family:'Noto Serif JP',serif; font-size:15px;
-  letter-spacing:.15em; border-radius:var(--radius); cursor:pointer;
-  width:calc(100% - 40px); transition:opacity .2s;
-}
-.btn-next:active { opacity:.8; }
+#screen-explain { background: var(--bg); }
+.photo-area { width: 100%; aspect-ratio: 16/9; background: #2A2720; position: relative; overflow: hidden; user-select: none; -webkit-user-select: none; }
+.photo-area img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; display: block; }
+.photo-placeholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: rgba(255,255,255,.2); font-size: 12px; }
+.photo-placeholder-icon { font-size: 28px; opacity: .2; }
+.photo-protect { position: absolute; inset: 0; background: transparent; z-index: 10; }
+.explain-header { background: var(--ink); color: var(--paper); padding: 18px 22px 16px; position: relative; overflow: hidden; }
+.explain-num-bg { position: absolute; right: 12px; top: 4px; font-family: var(--font-title); font-size: 60px; font-weight: 700; color: rgba(255,255,255,.05); line-height: 1; }
+.explain-badge { font-size: 10px; letter-spacing: .18em; color: var(--primary); border: 1px solid var(--primary); padding: 2px 9px; display: inline-block; margin-bottom: 7px; }
+.explain-title { font-family: var(--font-title); font-size: 22px; font-weight: 700; line-height: 1.3; position: relative; z-index: 1; margin-bottom: 10px; }
+.btn-voice-replay { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); color: rgba(250,247,241,.7); padding: 6px 13px; border-radius: 20px; font-size: 11px; letter-spacing: .07em; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: background .2s; }
+.btn-voice-replay:active { background: rgba(255,255,255,.15); }
+.explain-body { padding: 16px 20px 0; flex: 1; overflow-y: auto; }
+.explain-text { font-size: 14px; line-height: 2.0; color: var(--ink); letter-spacing: .04em; margin-bottom: 16px; white-space: pre-wrap; }
+.explain-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+.explain-sub { font-size: 10px; color: var(--muted); letter-spacing: .15em; text-transform: uppercase; margin-bottom: 7px; }
+.explain-keyword { display: inline-block; background: var(--paper); border: 1px solid var(--border); font-size: 11px; color: var(--gold); padding: 2px 9px; border-radius: 20px; margin: 2px 2px 2px 0; }
+.btn-next { margin: 14px 20px 24px; background: var(--primary); color: white; border: none; padding: 14px; font-family: var(--font-title); font-size: 14px; letter-spacing: .15em; border-radius: var(--radius); cursor: pointer; width: calc(100% - 40px); transition: opacity .2s; }
+.btn-next:active { opacity: .8; }
 
 /* ══ GOAL ══ */
-#screen-goal { background:var(--ink); color:var(--paper); overflow-y:auto; }
-
-.certificate {
-  width:100%; min-height:100vh;
-  background:linear-gradient(160deg,#1C1A16 0%,#2A2420 100%);
-  padding:44px 28px 36px; text-align:center; position:relative; overflow:hidden;
-}
-.cert-corner { position:absolute; width:56px; height:56px; border-color:rgba(154,122,58,.4); border-style:solid; }
-.cert-corner.tl { top:14px; left:14px; border-width:2px 0 0 2px; }
-.cert-corner.tr { top:14px; right:14px; border-width:2px 2px 0 0; }
-.cert-corner.bl { bottom:14px; left:14px; border-width:0 0 2px 2px; }
-.cert-corner.br { bottom:14px; right:14px; border-width:0 2px 2px 0; }
-.cert-pattern { position:absolute; inset:0; background-image:radial-gradient(circle at 15% 15%,rgba(184,50,50,.1) 0%,transparent 45%),radial-gradient(circle at 85% 85%,rgba(154,122,58,.1) 0%,transparent 45%); pointer-events:none; }
-.cert-inner { position:relative; z-index:1; }
-.cert-medal { font-size:64px; margin-bottom:16px; animation:float 3s ease-in-out infinite; }
+#screen-goal { background: var(--ink); color: var(--paper); overflow-y: auto; }
+.certificate { width: 100%; min-height: 100vh; background: linear-gradient(160deg,#1C1A16 0%,#2A2420 100%); padding: 40px 24px 32px; text-align: center; position: relative; overflow: hidden; }
+.cert-corner { position: absolute; width: 52px; height: 52px; border-color: rgba(154,122,58,.4); border-style: solid; }
+.cert-corner.tl{top:12px;left:12px;border-width:2px 0 0 2px} .cert-corner.tr{top:12px;right:12px;border-width:2px 2px 0 0}
+.cert-corner.bl{bottom:12px;left:12px;border-width:0 0 2px 2px} .cert-corner.br{bottom:12px;right:12px;border-width:0 2px 2px 0}
+.cert-pattern { position: absolute; inset: 0; background-image: radial-gradient(circle at 15% 15%,rgba(184,50,50,.1) 0%,transparent 45%),radial-gradient(circle at 85% 85%,rgba(154,122,58,.1) 0%,transparent 45%); pointer-events: none; }
+.cert-inner { position: relative; z-index: 1; }
+.cert-medal { font-size: 60px; margin-bottom: 14px; animation: float 3s ease-in-out infinite; }
 @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-.cert-label { font-size:10px; letter-spacing:.3em; color:var(--gold); border-top:1px solid rgba(154,122,58,.3); border-bottom:1px solid rgba(154,122,58,.3); padding:5px 0; display:inline-block; min-width:180px; margin-bottom:14px; }
-.cert-title { font-family:'Noto Serif JP',serif; font-size:26px; font-weight:700; margin-bottom:4px; letter-spacing:.08em; }
-.cert-course { font-size:12px; color:rgba(250,247,241,.45); letter-spacing:.1em; margin-bottom:20px; }
-.cert-text { font-family:'Noto Serif JP',serif; font-size:13px; line-height:2.1; color:rgba(250,247,241,.75); margin-bottom:20px; letter-spacing:.05em; }
-.cert-stats {
-  display:flex; justify-content:center; gap:24px; margin-bottom:20px;
-  padding:14px; background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.06); border-radius:8px;
-}
-.cert-stat { text-align:center; }
-.cert-stat-val { font-family:'Noto Serif JP',serif; font-size:22px; font-weight:700; color:var(--gold); }
-.cert-stat-unit { font-size:10px; color:rgba(250,247,241,.35); margin-left:2px; }
-.cert-stat-label { font-size:10px; color:rgba(250,247,241,.3); margin-top:2px; letter-spacing:.06em; }
-.cert-date { font-size:11px; color:rgba(250,247,241,.3); letter-spacing:.1em; margin-bottom:24px; }
-.cert-spots { display:flex; justify-content:center; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
-.cert-spot-badge { display:flex; flex-direction:column; align-items:center; gap:3px; }
-.cert-dot { width:34px; height:34px; background:var(--gold); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Noto Serif JP',serif; font-size:13px; font-weight:700; color:white; }
-.cert-spot-name { font-size:8px; color:rgba(250,247,241,.35); max-width:52px; text-align:center; line-height:1.3; }
-.cert-share-hint { font-size:10px; color:rgba(250,247,241,.2); letter-spacing:.08em; margin-bottom:20px; }
-.cert-buttons { display:flex; flex-direction:column; gap:10px; }
-.btn-view-prizes { background:var(--gold); color:white; border:none; padding:14px; font-family:'Noto Serif JP',serif; font-size:14px; letter-spacing:.12em; border-radius:4px; cursor:pointer; transition:opacity .2s; }
-.btn-view-prizes:active { opacity:.8; }
-.btn-restart-cert { background:transparent; border:1px solid rgba(250,247,241,.2); color:rgba(250,247,241,.4); padding:12px; font-size:12px; letter-spacing:.1em; border-radius:4px; cursor:pointer; transition:all .2s; }
-.btn-restart-cert:active { border-color:var(--vermillion); color:var(--vermillion); }
+.cert-label { font-size: 9px; letter-spacing: .3em; color: var(--gold); border-top: 1px solid rgba(154,122,58,.3); border-bottom: 1px solid rgba(154,122,58,.3); padding: 5px 0; display: inline-block; min-width: 170px; margin-bottom: 12px; }
+.cert-title { font-family: var(--font-title); font-size: 24px; font-weight: 700; margin-bottom: 3px; letter-spacing: .08em; }
+.cert-course { font-size: 11px; color: rgba(250,247,241,.4); letter-spacing: .1em; margin-bottom: 18px; }
+.cert-text { font-family: var(--font-title); font-size: 13px; line-height: 2.0; color: rgba(250,247,241,.75); margin-bottom: 18px; letter-spacing: .04em; }
+.cert-stats { display: flex; justify-content: center; gap: 20px; margin-bottom: 18px; padding: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 8px; }
+.cert-stat { text-align: center; }
+.cert-stat-val { font-family: var(--font-title); font-size: 20px; font-weight: 700; color: var(--gold); }
+.cert-stat-unit { font-size: 10px; color: rgba(250,247,241,.35); margin-left: 2px; }
+.cert-stat-label { font-size: 10px; color: rgba(250,247,241,.3); margin-top: 2px; }
+.cert-spots { display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.cert-spot-badge { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.cert-dot { width: 32px; height: 32px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-title); font-size: 12px; font-weight: 700; color: white; }
+.cert-spot-name { font-size: 8px; color: rgba(250,247,241,.3); max-width: 50px; text-align: center; line-height: 1.3; }
+.cert-date { font-size: 10px; color: rgba(250,247,241,.28); letter-spacing: .1em; margin-bottom: 20px; }
+.cert-share-hint { font-size: 10px; color: rgba(250,247,241,.2); margin-bottom: 18px; }
+.cert-buttons { display: flex; flex-direction: column; gap: 8px; }
+.btn-view-prizes { background: var(--gold); color: white; border: none; padding: 13px; font-family: var(--font-title); font-size: 13px; letter-spacing: .12em; border-radius: 4px; cursor: pointer; transition: opacity .2s; }
+.btn-view-prizes:active { opacity: .8; }
+.btn-restart-cert { background: transparent; border: 1px solid rgba(250,247,241,.2); color: rgba(250,247,241,.4); padding: 11px; font-size: 12px; letter-spacing: .1em; border-radius: 4px; cursor: pointer; }
+.btn-restart-cert:active { border-color: var(--primary); color: var(--primary); }
 
 /* ══ PRIZES ══ */
-#screen-prizes { background:var(--bg); }
-.prizes-header { background:var(--ink); color:var(--paper); padding:24px 24px 18px; }
-.prizes-header-badge { font-size:10px; letter-spacing:.2em; color:var(--gold); border:1px solid rgba(154,122,58,.4); padding:2px 10px; display:inline-block; margin-bottom:8px; }
-.prizes-header-title { font-family:'Noto Serif JP',serif; font-size:22px; font-weight:700; }
-.prizes-body { padding:20px; flex:1; overflow-y:auto; }
-.prizes-section-label { font-size:10px; color:var(--muted); letter-spacing:.2em; text-transform:uppercase; margin-bottom:10px; padding-bottom:5px; border-bottom:1px solid var(--border); }
-.prize-card { background:var(--paper); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; gap:12px; position:relative; overflow:hidden; }
-.prize-card.completed { border-color:var(--gold); }
-.prize-card.locked { opacity:.55; }
-.prize-card-bar { position:absolute; top:0; left:0; width:4px; height:100%; background:var(--gold); border-radius:var(--radius) 0 0 var(--radius); }
-.prize-card-icon { font-size:30px; flex-shrink:0; }
-.prize-card-info { flex:1; }
-.prize-card-name { font-family:'Noto Serif JP',serif; font-size:15px; font-weight:600; margin-bottom:2px; }
-.prize-card-desc { font-size:11px; color:var(--muted); line-height:1.6; letter-spacing:.04em; }
-.prize-card-date { font-size:10px; color:var(--gold); margin-top:3px; letter-spacing:.05em; }
-.prize-card-status { flex-shrink:0; text-align:center; }
-.prize-status-icon { font-size:20px; }
-.prize-status-label { font-size:9px; color:var(--muted); margin-top:2px; letter-spacing:.06em; }
-.empty-prizes { text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; line-height:2.0; letter-spacing:.06em; }
-.empty-icon { font-size:36px; margin-bottom:14px; opacity:.35; }
-.btn-back { margin:0 20px 24px; background:var(--ink); color:var(--paper); border:none; padding:14px; font-family:'Noto Serif JP',serif; font-size:14px; letter-spacing:.12em; border-radius:var(--radius); cursor:pointer; width:calc(100% - 40px); transition:opacity .2s; }
-.btn-back:active { opacity:.8; }
+#screen-prizes { background: var(--bg); }
+.prizes-header { background: var(--ink); color: var(--paper); padding: 24px 22px 18px; }
+.prizes-header-badge { font-size: 10px; letter-spacing: .2em; color: var(--gold); border: 1px solid rgba(154,122,58,.4); padding: 2px 9px; display: inline-block; margin-bottom: 7px; }
+.prizes-header-title { font-family: var(--font-title); font-size: 22px; font-weight: 700; }
+.prizes-body { padding: 18px; flex: 1; overflow-y: auto; }
+.prizes-section-label { font-size: 10px; color: var(--muted); letter-spacing: .2em; text-transform: uppercase; margin-bottom: 9px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.prize-card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 15px; margin-bottom: 9px; display: flex; align-items: center; gap: 11px; position: relative; overflow: hidden; }
+.prize-card.completed { border-color: var(--gold); }
+.prize-card.locked { opacity: .55; }
+.prize-card-bar { position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--gold); border-radius: var(--radius) 0 0 var(--radius); }
+.prize-card-icon { font-size: 28px; flex-shrink: 0; }
+.prize-card-info { flex: 1; }
+.prize-card-name { font-family: var(--font-title); font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.prize-card-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+.prize-card-date { font-size: 10px; color: var(--gold); margin-top: 3px; }
+.prize-card-status { flex-shrink: 0; text-align: center; }
+.prize-status-icon { font-size: 20px; }
+.prize-status-label { font-size: 9px; color: var(--muted); margin-top: 2px; }
+.empty-prizes { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; line-height: 2.0; }
+.empty-icon { font-size: 36px; margin-bottom: 12px; opacity: .3; }
+.btn-back { margin: 0 20px 24px; background: var(--ink); color: var(--paper); border: none; padding: 13px; font-family: var(--font-title); font-size: 13px; letter-spacing: .12em; border-radius: var(--radius); cursor: pointer; width: calc(100% - 40px); }
+.btn-back:active { opacity: .8; }
 </style>
 </head>
 <body>
 
 <!-- ① ローディング -->
 <div id="screen-loading" class="screen active">
-  <div class="loading-logo">増田まち歩き</div>
+  <div class="loading-logo" id="loading-logo">まち歩き</div>
   <div class="loading-sub">local-walk-guide</div>
-  <div class="loading-dots">
-    <div class="loading-dot"></div>
-    <div class="loading-dot"></div>
-    <div class="loading-dot"></div>
-  </div>
+  <div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>
   <div class="loading-msg" id="loading-msg">データを読み込んでいます…</div>
-  <div class="loading-error" id="loading-error" style="display:none">
-    データの読み込みに失敗しました。<br>
-    ネットワーク接続を確認してください。<br>
-    <button class="btn-retry" onclick="loadAllData()">再試行</button>
+  <div class="loading-error" id="loading-error">
+    データの読み込みに失敗しました。<br>ネットワーク接続を確認してください。<br>
+    <button class="btn-retry" onclick="initApp()">再試行</button>
   </div>
 </div>
 
-<!-- ② コース選択 -->
-<div id="screen-courses" class="screen">
-  <div class="courses-header">
-    <div class="courses-badge">MASUDA MACHI ARUKI</div>
-    <div class="courses-title">増田<br>まち歩き</div>
-    <div class="courses-subtitle">コースを選んでください</div>
+<!-- ② ホーム -->
+<div id="screen-home" class="screen">
+  <div class="home-header" id="home-header">
+    <div class="home-header-bg"></div>
+    <div class="home-header-overlay"></div>
+    <div class="home-badge">MACHI ARUKI GUIDE</div>
+    <div class="home-title" id="home-title">まち歩き</div>
+    <div class="home-subtitle" id="home-subtitle">コースを選んでください</div>
   </div>
-  <div class="courses-body">
-    <div id="course-list"></div>
-    <button class="btn-prizes-top" onclick="showScreen('screen-prizes'); renderPrizes()">🏅 獲得済みプライズを見る</button>
-    <div class="credit">
-      企画・ディレクション：小坂将人<br>
-      増田町観光協会理事 ／ 増田町観光ガイドの会理事
-    </div>
-  </div>
+  <div class="home-body" id="home-body"></div>
 </div>
 
 <!-- ③ ナビ -->
@@ -409,14 +325,10 @@ body {
     <div class="nav-progress-bar"><div class="nav-progress-fill" id="progress-fill"></div></div>
     <div class="nav-top-row">
       <div class="nav-step-label" id="nav-step-label"></div>
-      <div class="gps-status">
-        <div class="gps-dot searching" id="gps-dot"></div>
-        <span id="gps-label">GPS取得中</span>
-      </div>
+      <div class="gps-status"><div class="gps-dot searching" id="gps-dot"></div><span id="gps-label">GPS取得中</span></div>
     </div>
     <div class="nav-spot-name" id="nav-spot-name"></div>
   </div>
-
   <div class="distance-panel" id="distance-panel">
     <div class="dist-icon" id="dist-icon">🚶</div>
     <div class="dist-info">
@@ -424,47 +336,46 @@ body {
       <div class="dist-status" id="dist-status">GPS位置情報を取得しています…</div>
     </div>
     <div class="ring-wrap">
-      <svg class="ring-svg" width="48" height="48" viewBox="0 0 48 48">
-        <circle class="ring-bg" cx="24" cy="24" r="20"/>
-        <circle class="ring-fill" id="ring-fill" cx="24" cy="24" r="20"/>
+      <svg class="ring-svg" width="44" height="44" viewBox="0 0 44 44">
+        <circle class="ring-bg" cx="22" cy="22" r="18"/>
+        <circle class="ring-fill" id="ring-fill" cx="22" cy="22" r="18"/>
       </svg>
       <div class="ring-label" id="ring-label">--</div>
     </div>
   </div>
-
-  <div class="walk-distance-bar">
-    <span>🦶 歩行距離</span>
-    <span class="walk-dist-val" id="walk-dist-val">0 m</span>
+  <div class="walk-bar"><span>🦶 歩行距離</span><span class="walk-val" id="walk-val">0 m</span></div>
+  <div class="facility-toast" id="facility-toast"><span>🏢</span><span id="facility-toast-text"></span></div>
+  <div class="voice-log" id="voice-log"><span id="voice-wave">🔇</span><span id="voice-log-text">音声ガイド待機中</span></div>
+  <div class="map-container">
+    <div id="leaflet-map"></div>
+    <button class="btn-ar" id="btn-ar" onclick="openAR()">📷 ARで見る</button>
   </div>
-
-  <div class="facility-toast" id="facility-toast">
-    <span>🏢</span>
-    <span id="facility-toast-text"></span>
-  </div>
-
-  <div class="voice-log" id="voice-log">
-    <span id="voice-wave">🔇</span>
-    <span id="voice-log-text">音声ガイド待機中</span>
-  </div>
-
-  <div class="map-container"><div id="leaflet-map"></div></div>
-
   <div class="spots-row" id="spots-row"></div>
-
   <div class="arrive-section">
     <button class="btn-arrived" onclick="manualArrive()">📍 着いた！（手動）</button>
     <div class="manual-hint">GPSが届かない場合などに使用</div>
   </div>
 </div>
 
-<!-- ④ 解説 -->
+<!-- ④ AR -->
+<div id="screen-ar" class="screen">
+  <video id="ar-video" autoplay playsinline muted></video>
+  <div class="ar-overlay">
+    <div class="ar-arrow" id="ar-arrow">↑</div>
+    <div class="ar-info">
+      <div class="ar-spot-name" id="ar-spot-name"></div>
+      <div class="ar-dist" id="ar-dist">--<span>m</span></div>
+    </div>
+  </div>
+  <div class="ar-compass" id="ar-compass">方位取得中…</div>
+  <button class="btn-ar-close" onclick="closeAR()">✕ 地図に戻る</button>
+</div>
+
+<!-- ⑤ 解説 -->
 <div id="screen-explain" class="screen">
   <div class="photo-area" id="photo-area">
     <div class="photo-protect" oncontextmenu="return false;"></div>
-    <div class="photo-placeholder" id="photo-placeholder">
-      <div class="photo-placeholder-icon">📷</div>
-      <div>写真準備中</div>
-    </div>
+    <div class="photo-placeholder" id="photo-placeholder"><div class="photo-placeholder-icon">📷</div><div>写真準備中</div></div>
   </div>
   <div class="explain-header">
     <div class="explain-num-bg" id="explain-num-bg"></div>
@@ -481,156 +392,163 @@ body {
   <button class="btn-next" id="btn-next" onclick="nextSpot()"></button>
 </div>
 
-<!-- ⑤ 表彰状 -->
+<!-- ⑥ 表彰状 -->
 <div id="screen-goal" class="screen">
   <div class="certificate">
-    <div class="cert-corner tl"></div><div class="cert-corner tr"></div>
-    <div class="cert-corner bl"></div><div class="cert-corner br"></div>
+    <div class="cert-corner tl"></div><div class="cert-corner tr"></div><div class="cert-corner bl"></div><div class="cert-corner br"></div>
     <div class="cert-pattern"></div>
     <div class="cert-inner">
       <div class="cert-medal">🏮</div>
       <div class="cert-label">COMPLETION CERTIFICATE</div>
       <div class="cert-title">まち歩き完了</div>
-      <div class="cert-course" id="cert-course-name"></div>
-      <div class="cert-text">
-        増田の礎を歩き切りました。<br>
-        蔵通りの内蔵が夜に光ることから<br>
-        「蛍町」と呼ばれたこの地で、<br>
-        歴史の重みを感じていただけましたか。
-      </div>
+      <div class="cert-course" id="cert-course"></div>
+      <div class="cert-text" id="cert-text">まち歩きコースを完走しました。</div>
       <div class="cert-stats">
-        <div class="cert-stat">
-          <div class="cert-stat-val" id="cert-walk-dist">0<span class="cert-stat-unit">m</span></div>
-          <div class="cert-stat-label">歩行距離</div>
-        </div>
-        <div class="cert-stat">
-          <div class="cert-stat-val" id="cert-spot-count">0<span class="cert-stat-unit">箇所</span></div>
-          <div class="cert-stat-label">訪問スポット</div>
-        </div>
+        <div class="cert-stat"><div class="cert-stat-val" id="cert-dist">0<span class="cert-stat-unit">m</span></div><div class="cert-stat-label">歩行距離</div></div>
+        <div class="cert-stat"><div class="cert-stat-val" id="cert-count">0<span class="cert-stat-unit">箇所</span></div><div class="cert-stat-label">訪問スポット</div></div>
       </div>
       <div class="cert-spots" id="cert-spots"></div>
       <div class="cert-date" id="cert-date"></div>
       <div class="cert-share-hint">📸 スクリーンショットで記念に保存できます</div>
       <div class="cert-buttons">
-        <button class="btn-view-prizes" onclick="showScreen('screen-prizes'); renderPrizes()">🏅 プライズを確認する</button>
-        <button class="btn-restart-cert" onclick="restart()">コース選択に戻る</button>
+        <button class="btn-view-prizes" onclick="showScreen('screen-prizes');renderPrizes()">🏅 プライズを確認する</button>
+        <button class="btn-restart-cert" onclick="goHome()">コース選択に戻る</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ⑥ プライズ -->
+<!-- ⑦ プライズ -->
 <div id="screen-prizes" class="screen">
   <div class="prizes-header">
     <div class="prizes-header-badge">MY PRIZES</div>
     <div class="prizes-header-title">獲得プライズ</div>
   </div>
   <div class="prizes-body" id="prizes-body"></div>
-  <button class="btn-back" onclick="showScreen('screen-courses')">← コース選択へ戻る</button>
+  <button class="btn-back" onclick="goHome()">← ホームへ戻る</button>
 </div>
 
 <script>
+'use strict';
+
 // ══════════════════════════════════════
-// 設定
+// 定数
 // ══════════════════════════════════════
-const SHEET_ID = '1fugAECsnEQIHXgQh1qyPOaLJL-6wMuW0B4dA6Ac6k24';
-const AUDIO_BASE = 'audio/'; // GitHubリポジトリのaudioフォルダ
+const DEFAULT_SHEET_ID = '1fugAECsnEQIHXgQh1qyPOaLJL-6wMuW0B4dA6Ac6k24';
+const MASUDA_SHEET_ID  = '1fugAECsnEQIHXgQh1qyPOaLJL-6wMuW0B4dA6Ac6k24';
+const AUDIO_BASE = 'audio/';
+const DRIVE_BASE = 'https://drive.google.com/uc?export=view&id=';
 
 // ══════════════════════════════════════
 // データ
 // ══════════════════════════════════════
-let allCourses = [];
-let allSpots = [];
-let allFacilities = [];
+let cfg = {};
+let allCourses = [], allSpots = [], allCourseSpots = [], allFacilities = [];
+let currentSheetId = DEFAULT_SHEET_ID;
+
+// ツアー状態
+let currentCourse = null, courseSpots = [], currentIdx = 0;
+let watchId = null, approachNotified = false, arrivedDetected = false;
+let lastVoiceText = '', announcedFacilities = new Set();
+let leafletMap = null, userMarker = null, destMarker = null, destCircle = null;
+let totalWalkDist = 0, lastWalkPos = null;
+let facilityTimer = null;
+let arStream = null, arWatchId = null, arLastDist = 0;
 
 // ══════════════════════════════════════
-// ツアー状態
+// ローカルストレージ
 // ══════════════════════════════════════
-let currentCourse = null;
-let courseSpots = [];
-let currentSpotIndex = 0;
-let watchId = null;
-let approachNotified = false;
-let arrivedDetected = false;
-let lastVoiceText = '';
-let announcedFacilities = new Set();
-let leafletMap = null;
-let userMarker = null;
-let destMarker = null;
-let routeLine = null;
-let walkPositions = [];
-let totalWalkDist = 0;
-let lastWalkPos = null;
-let facilityToastTimer = null;
+function lsGet(key, def) { try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? def; } catch { return def; } }
+function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+function loadPrizes() { return lsGet('lwg_prizes', {}); }
+function savePrize(id, date) { const p = loadPrizes(); p[id] = date; lsSet('lwg_prizes', p); }
+
+function loadAreas() { return lsGet('lwg_areas', { home: null, favorites: [], visited: [] }); }
+function saveAreas(areas) { lsSet('lwg_areas', areas); }
+
+function recordVisit(sheetId, name) {
+  const areas = loadAreas();
+  if (!areas.home) { areas.home = { sid: sheetId, name }; }
+  const alreadyVisited = areas.visited.find(v => v.sid === sheetId);
+  if (!alreadyVisited) areas.visited.push({ sid: sheetId, name, date: new Date().toISOString() });
+  else alreadyVisited.date = new Date().toISOString();
+  saveAreas(areas);
+}
 
 // ══════════════════════════════════════
 // CSVパーサー
 // ══════════════════════════════════════
 function parseCSV(text) {
-  const rows = [];
-  const lines = text.split('\n');
+  const rows = []; const lines = text.split('\n');
   if (lines.length < 2) return rows;
-  const headers = splitCSVLine(lines[0]);
+  const headers = splitLine(lines[0]);
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const values = splitCSVLine(line);
-    const obj = {};
-    headers.forEach((h, idx) => { obj[h.trim()] = (values[idx] || '').trim(); });
+    const line = lines[i].trim(); if (!line) continue;
+    const vals = splitLine(line); const obj = {};
+    headers.forEach((h, idx) => { obj[h.trim()] = (vals[idx] || '').trim(); });
     rows.push(obj);
   }
   return rows;
 }
 
-function splitCSVLine(line) {
-  const result = [];
-  let current = '';
-  let inQuotes = false;
+function splitLine(line) {
+  const r = []; let cur = '', inQ = false;
   for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i+1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (ch === ',' && !inQuotes) {
-      result.push(current); current = '';
-    } else {
-      current += ch;
-    }
+    const c = line[i];
+    if (c === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (c === ',' && !inQ) { r.push(cur); cur = ''; }
+    else cur += c;
   }
-  result.push(current);
-  return result;
+  r.push(cur); return r;
 }
 
 // ══════════════════════════════════════
-// スプレッドシート読み込み
+// シート取得
 // ══════════════════════════════════════
-function sheetURL(sheet) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${sheet}`;
+function sheetURL(sid, sheet) {
+  return `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${sheet}`;
 }
 
-async function fetchSheet(sheet) {
-  const res = await fetch(sheetURL(sheet));
-  if (!res.ok) throw new Error(`Sheet fetch failed: ${sheet}`);
+async function fetchSheet(sid, sheet) {
+  const res = await fetch(sheetURL(sid, sheet));
+  if (!res.ok) throw new Error(`fetch failed: ${sheet}`);
   return await res.text();
 }
 
-async function loadAllData() {
+// ══════════════════════════════════════
+// 初期化
+// ══════════════════════════════════════
+async function initApp() {
   document.getElementById('loading-error').style.display = 'none';
   document.getElementById('loading-msg').textContent = 'データを読み込んでいます…';
 
+  // URLパラメータからsid取得
+  const params = new URLSearchParams(location.search);
+  currentSheetId = params.get('sid') || DEFAULT_SHEET_ID;
+
   try {
-    const [coursesCSV, spotsCSV, facilitiesCSV] = await Promise.all([
-      fetchSheet('courses'),
-      fetchSheet('spots'),
-      fetchSheet('facilities')
+    const [cfgCSV, coursesCSV, spotsCSV, csCSV, facCSV] = await Promise.all([
+      fetchSheet(currentSheetId, 'config'),
+      fetchSheet(currentSheetId, 'courses'),
+      fetchSheet(currentSheetId, 'spots'),
+      fetchSheet(currentSheetId, 'course_spots'),
+      fetchSheet(currentSheetId, 'facilities'),
     ]);
 
+    // config
+    cfg = {};
+    parseCSV(cfgCSV).forEach(r => { if (r.key) cfg[r.key] = r.value; });
+    applyConfig();
+
+    // データ
     allCourses = parseCSV(coursesCSV).map(c => ({
       ...c,
       display_order: parseInt(c.display_order) || 99,
       recommended: c.recommended === 'TRUE',
       duration_min: parseInt(c.duration_min) || 0,
       distance_m: parseInt(c.distance_m) || 0,
+      special_enabled: c.special_enabled === 'TRUE',
     }));
 
     allSpots = parseCSV(spotsCSV).map(s => ({
@@ -639,18 +557,25 @@ async function loadAllData() {
       lng: parseFloat(s.lng),
       approach_dist: parseInt(s.approach_dist) || 50,
       arrive_dist: parseInt(s.arrive_dist) || 15,
-      order: parseInt(s.order) || 99,
     }));
 
-    allFacilities = parseCSV(facilitiesCSV).map(f => ({
+    allCourseSpots = parseCSV(csCSV).map(cs => ({
+      ...cs,
+      order: parseInt(cs.order) || 99,
+    }));
+
+    allFacilities = parseCSV(facCSV).map(f => ({
       ...f,
       lat: parseFloat(f.lat),
       lng: parseFloat(f.lng),
       trigger_dist: parseInt(f.trigger_dist) || 30,
     }));
 
-    showScreen('screen-courses');
-    renderCourseList();
+    // 訪問記録
+    recordVisit(currentSheetId, cfg.app_title || 'まち歩き');
+
+    showScreen('screen-home');
+    renderHome();
 
   } catch(e) {
     console.error(e);
@@ -660,102 +585,158 @@ async function loadAllData() {
 }
 
 // ══════════════════════════════════════
-// 日付フィルター
+// コンフィグ適用
 // ══════════════════════════════════════
-function isActive(item) {
-  const today = new Date(); today.setHours(0,0,0,0);
-  if (item.start_date) {
-    const s = new Date(item.start_date);
-    if (!isNaN(s) && today < s) return false;
+function applyConfig() {
+  const r = document.documentElement;
+  if (cfg.color_bg) r.style.setProperty('--bg', cfg.color_bg);
+  if (cfg.color_paper) r.style.setProperty('--paper', cfg.color_paper);
+  if (cfg.color_ink) r.style.setProperty('--ink', cfg.color_ink);
+  if (cfg.color_primary) r.style.setProperty('--primary', cfg.color_primary);
+  if (cfg.color_gold) r.style.setProperty('--gold', cfg.color_gold);
+  if (cfg.font_title) r.style.setProperty('--font-title', `'${cfg.font_title}', serif`);
+  if (cfg.font_body) r.style.setProperty('--font-body', `'${cfg.font_body}', sans-serif`);
+
+  const title = cfg.app_title || 'まち歩き';
+  document.title = title;
+  document.getElementById('loading-logo').textContent = title;
+  document.getElementById('home-title').textContent = title;
+  if (cfg.app_subtitle) document.getElementById('home-subtitle').textContent = cfg.app_subtitle;
+
+  // ヘッダー画像
+  if (cfg.header_type === 'image' && cfg.header_image_id) {
+    const img = document.createElement('img');
+    img.className = 'home-header-img';
+    img.src = DRIVE_BASE + cfg.header_image_id;
+    document.getElementById('home-header').prepend(img);
   }
-  if (item.end_date) {
-    const e = new Date(item.end_date);
-    if (!isNaN(e) && today > e) return false;
-  }
-  return true;
-}
-
-function getActiveCourses() {
-  return allCourses
-    .filter(isActive)
-    .sort((a, b) => {
-      if (a.recommended && !b.recommended) return -1;
-      if (!a.recommended && b.recommended) return 1;
-      return a.display_order - b.display_order;
-    });
-}
-
-function getActiveFacilities() {
-  return allFacilities.filter(isActive);
 }
 
 // ══════════════════════════════════════
-// コース一覧描画
+// ホーム描画
 // ══════════════════════════════════════
-function renderCourseList() {
+function renderHome() {
+  const body = document.getElementById('home-body');
+  body.innerHTML = '';
   const prizes = loadPrizes();
-  const courses = getActiveCourses();
-  const list = document.getElementById('course-list');
-  list.innerHTML = '';
+  const areas = loadAreas();
+  const today = new Date(); today.setHours(0,0,0,0);
 
-  if (courses.length === 0) {
-    list.innerHTML = '<div style="color:rgba(250,247,241,.4);text-align:center;padding:40px 0;font-size:13px;">現在公開中のコースはありません</div>';
-    return;
-  }
+  // アクティブコース
+  const activeCourses = allCourses.filter(c => isActive(c))
+    .sort((a,b) => { if (a.recommended && !b.recommended) return -1; if (!a.recommended && b.recommended) return 1; return a.display_order - b.display_order; });
 
-  const recCourses = courses.filter(c => c.recommended);
-  const normalCourses = courses.filter(c => !c.recommended);
+  const recCourses = activeCourses.filter(c => c.recommended);
+  const normalCourses = activeCourses.filter(c => !c.recommended);
 
   if (recCourses.length > 0) {
-    const lbl = document.createElement('div');
-    lbl.className = 'courses-section-label';
-    lbl.textContent = 'おすすめ ★';
-    list.appendChild(lbl);
-    recCourses.forEach(c => list.appendChild(makeCourseCard(c, prizes)));
+    body.appendChild(sectionLabel('おすすめ ★'));
+    recCourses.forEach(c => body.appendChild(makeCourseCard(c, prizes)));
+  }
+  if (normalCourses.length > 0) {
+    const lbl = sectionLabel('コース一覧');
+    if (recCourses.length > 0) lbl.style.marginTop = '14px';
+    body.appendChild(lbl);
+    normalCourses.forEach(c => body.appendChild(makeCourseCard(c, prizes)));
   }
 
-  if (normalCourses.length > 0) {
-    const lbl = document.createElement('div');
-    lbl.className = 'courses-section-label';
-    lbl.style.marginTop = recCourses.length > 0 ? '20px' : '0';
-    lbl.textContent = 'コース一覧';
-    list.appendChild(lbl);
-    normalCourses.forEach(c => list.appendChild(makeCourseCard(c, prizes)));
+  // 他のまち歩き（訪れた町）
+  const otherAreas = areas.visited.filter(v => v.sid !== currentSheetId);
+  if (otherAreas.length > 0) {
+    const lbl = sectionLabel('訪れたまち歩き'); lbl.style.marginTop = '14px';
+    body.appendChild(lbl);
+    otherAreas.forEach(a => body.appendChild(makeAreaCard(a, '📍', '')));
   }
+
+  // 増田をさりげなく表示（増田以外のシートで、増田を訪れていない場合）
+  if (currentSheetId !== MASUDA_SHEET_ID) {
+    const visitedMasuda = areas.visited.find(v => v.sid === MASUDA_SHEET_ID);
+    if (!visitedMasuda) {
+      const lbl = sectionLabel('こんなまち歩きも'); lbl.style.marginTop = '14px';
+      body.appendChild(lbl);
+      const masudaCard = makeAreaCard({ sid: MASUDA_SHEET_ID, name: '増田まち歩き', desc: '秋田県横手市増田町 ／ 重要伝統的建造物群保存地区' }, '🏮', 'masuda');
+      body.appendChild(masudaCard);
+    }
+  }
+
+  // プライズボタン
+  const btnPrizes = document.createElement('button');
+  btnPrizes.className = 'btn-prizes-home';
+  btnPrizes.style.marginTop = '14px';
+  btnPrizes.textContent = '🏅 獲得済みプライズを見る';
+  btnPrizes.onclick = () => { showScreen('screen-prizes'); renderPrizes(); };
+  body.appendChild(btnPrizes);
+
+  // クレジット（固定）
+  const credit = document.createElement('div');
+  credit.className = 'credit';
+  credit.innerHTML = '企画・ディレクション：小坂将人<br>増田町観光協会理事 ／ 増田町観光ガイドの会理事';
+  body.appendChild(credit);
+}
+
+function sectionLabel(text) {
+  const el = document.createElement('div');
+  el.className = 'home-section-label';
+  el.textContent = text;
+  return el;
 }
 
 function makeCourseCard(course, prizes) {
   const prizeId = 'course_' + course.course_id;
   const done = !!prizes[prizeId];
-
   const card = document.createElement('div');
-  card.className = 'course-card' +
-    (course.recommended ? ' recommended' : '') +
-    (done ? ' completed' : '');
+  card.className = 'course-card' + (course.recommended ? ' recommended' : '') + (done ? ' completed' : '');
 
-  let badge = '';
-  if (done) badge = '<div class="course-card-done">✓ 完了</div>';
-  else if (course.recommended) badge = '<div class="course-card-rec">★ おすすめ</div>';
+  let tag = '';
+  if (done) tag = '<div class="course-card-tag tag-done">✓ 完了</div>';
+  else if (course.recommended) tag = '<div class="course-card-tag tag-rec">★ おすすめ</div>';
 
   let period = '';
   if (course.start_date || course.end_date) {
     const s = course.start_date ? course.start_date.replace(/-/g,'/') : '';
     const e = course.end_date ? course.end_date.replace(/-/g,'/') : '';
-    period = `<div class="course-card-period">🗓 ${s}${e ? ' 〜 ' + e : ''} 限定</div>`;
+    period = `<div class="course-card-period">🗓 ${s}${e ? ' 〜 '+e : ''} 限定</div>`;
   }
 
-  card.innerHTML = `
-    ${badge}
-    <div class="course-card-type">${course.course_type}</div>
-    <div class="course-card-name">${course.course_name}</div>
-    <div class="course-card-meta">
-      <span>🕐 約${course.duration_min}分</span>
-      <span>📍 約${course.distance_m}m</span>
-    </div>
-    ${period}
-  `;
+  card.innerHTML = `${tag}<div class="course-card-type">${course.course_type}</div><div class="course-card-name">${course.course_name}</div><div class="course-card-meta"><span>🕐 約${course.duration_min}分</span><span>📍 約${course.distance_m}m</span></div>${period}`;
   card.onclick = () => selectCourse(course);
   return card;
+}
+
+function makeAreaCard(area, icon, type) {
+  const card = document.createElement('div');
+  card.className = 'area-card' + (type === 'masuda' ? ' masuda-recommend' : '');
+  card.innerHTML = `
+    <div class="area-card-icon">${icon}</div>
+    <div class="area-card-info">
+      <div class="area-card-name">${area.name}</div>
+      <div class="area-card-desc">${area.desc || ''}</div>
+    </div>
+    <div class="area-card-arrow">›</div>
+  `;
+  card.onclick = () => {
+    const url = `${location.pathname}?sid=${area.sid}`;
+    location.href = url;
+  };
+  return card;
+}
+
+// ══════════════════════════════════════
+// 日付チェック
+// ══════════════════════════════════════
+function isActive(item) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (item.start_date) { const s = new Date(item.start_date); if (!isNaN(s) && today < s) return false; }
+  if (item.end_date) { const e = new Date(item.end_date); if (!isNaN(e) && today > e) return false; }
+  return true;
+}
+
+function isSpecialActive(course) {
+  if (!course.special_enabled) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (course.special_start_date) { const s = new Date(course.special_start_date); if (!isNaN(s) && today < s) return false; }
+  if (course.special_end_date) { const e = new Date(course.special_end_date); if (!isNaN(e) && today > e) return false; }
+  return true;
 }
 
 // ══════════════════════════════════════
@@ -763,19 +744,21 @@ function makeCourseCard(course, prizes) {
 // ══════════════════════════════════════
 function selectCourse(course) {
   currentCourse = course;
-  courseSpots = allSpots
-    .filter(s => s.course_id === course.course_id)
-    .sort((a, b) => a.order - b.order);
 
-  if (courseSpots.length === 0) {
-    alert('このコースのスポットデータがありません');
-    return;
-  }
+  // course_spotsからスポットを結合
+  const csRows = allCourseSpots
+    .filter(cs => cs.course_id === course.course_id)
+    .sort((a,b) => a.order - b.order);
 
-  currentSpotIndex = 0;
-  walkPositions = [];
-  totalWalkDist = 0;
-  lastWalkPos = null;
+  courseSpots = csRows.map(cs => {
+    const spot = allSpots.find(s => s.spot_id === cs.spot_id);
+    return spot ? { ...spot, order: cs.order } : null;
+  }).filter(Boolean);
+
+  if (courseSpots.length === 0) { alert('スポットデータがありません'); return; }
+
+  currentIdx = 0;
+  totalWalkDist = 0; lastWalkPos = null;
   announcedFacilities = new Set();
 
   updateNavScreen();
@@ -783,10 +766,28 @@ function selectCourse(course) {
   initMap();
   startGPS();
 
-  // コースタイプ別注意喚起
-  const caution = getCaution(course.course_type);
+  // スタートアナウンス
   setTimeout(() => {
-    playVoice(null, `${course.course_name}を始めます。${caution}最初の目的地は${courseSpots[0].spot_name}です。`);
+    const caution = getCaution(course.course_type);
+    const startSpot = courseSpots[0];
+    const specialActive = isSpecialActive(course);
+
+    if (specialActive && course.audio_special_start) {
+      // 特別スタート → 通常スタート
+      playVoice(course.audio_special_start, `特別アナウンスです。`, () => {
+        if (startSpot.audio_start) {
+          playVoice(startSpot.audio_start, `${caution}最初の目的地は${startSpot.spot_name}です。`);
+        } else {
+          speakTTS(`${caution}最初の目的地は${startSpot.spot_name}です。`);
+        }
+      });
+    } else {
+      if (startSpot.audio_start) {
+        playVoice(startSpot.audio_start, `${caution}最初の目的地は${startSpot.spot_name}です。`);
+      } else {
+        speakTTS(`${caution}最初の目的地は${startSpot.spot_name}です。`);
+      }
+    }
   }, 800);
 }
 
@@ -800,12 +801,17 @@ function getCaution(type) {
 // ══════════════════════════════════════
 // ユーティリティ
 // ══════════════════════════════════════
-function haversine(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const φ1 = lat1*Math.PI/180, φ2 = lat2*Math.PI/180;
-  const Δφ = (lat2-lat1)*Math.PI/180, Δλ = (lng2-lng1)*Math.PI/180;
-  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+function haversine(la1,lo1,la2,lo2) {
+  const R=6371000, φ1=la1*Math.PI/180, φ2=la2*Math.PI/180;
+  const Δφ=(la2-la1)*Math.PI/180, Δλ=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(Δφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function bearing(la1,lo1,la2,lo2) {
+  const φ1=la1*Math.PI/180, φ2=la2*Math.PI/180, Δλ=(lo2-lo1)*Math.PI/180;
+  const y=Math.sin(Δλ)*Math.cos(φ2), x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
 }
 
 function showScreen(id) {
@@ -814,55 +820,47 @@ function showScreen(id) {
   if (id === 'screen-nav' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
 }
 
-function formatDate(iso) {
-  const d = new Date(iso);
-  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
-}
+function formatDist(m) { return m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(1)} km`; }
+function formatDate(iso) { const d=new Date(iso); return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`; }
 
-function formatDist(m) {
-  return m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(1)} km`;
-}
+function goHome() { stopGPS(); closeAR(); showScreen('screen-home'); renderHome(); }
 
 // ══════════════════════════════════════
 // 音声
 // ══════════════════════════════════════
 let currentAudio = null;
 
-async function playVoice(filename, fallbackText) {
-  // MP3が存在する場合はそちらを優先、なければTTS
+function playVoice(filename, fallback, onEnd) {
   if (filename) {
     try {
       if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       const audio = new Audio(AUDIO_BASE + filename);
-      audio.addEventListener('error', () => speakTTS(fallbackText));
-      await audio.play();
-      currentAudio = audio;
-      setVoiceLog('🔊', filename);
-      lastVoiceText = fallbackText;
+      audio.addEventListener('error', () => speakTTS(fallback, onEnd));
+      audio.addEventListener('ended', () => { if (onEnd) onEnd(); });
+      audio.play().then(() => { currentAudio = audio; setVoiceLog('🔊', filename); lastVoiceText = fallback; }).catch(() => speakTTS(fallback, onEnd));
       return;
-    } catch(e) { /* fall through to TTS */ }
+    } catch(e) {}
   }
-  speakTTS(fallbackText);
+  speakTTS(fallback, onEnd);
 }
 
-function speakTTS(text) {
-  if (!text || !('speechSynthesis' in window)) return;
+function speakTTS(text, onEnd) {
+  if (!text || !('speechSynthesis' in window)) { if (onEnd) onEnd(); return; }
   speechSynthesis.cancel();
   lastVoiceText = text;
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'ja-JP'; utter.rate = 0.88; utter.pitch = 1.0; utter.volume = 1.0;
-  const voices = speechSynthesis.getVoices();
-  const jaVoice = voices.find(v => v.lang.startsWith('ja'));
-  if (jaVoice) utter.voice = jaVoice;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang='ja-JP'; u.rate=0.88; u.pitch=1.0; u.volume=1.0;
+  const v = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
+  if (v) u.voice = v;
+  if (onEnd) u.onend = onEnd;
   setVoiceLog('🔊', text);
-  speechSynthesis.speak(utter);
+  speechSynthesis.speak(u);
 }
 
 function replayVoice() { speakTTS(lastVoiceText); }
-
 function setVoiceLog(icon, text) {
   document.getElementById('voice-wave').textContent = icon;
-  document.getElementById('voice-log-text').textContent = text.length > 30 ? text.slice(0,30)+'…' : text;
+  document.getElementById('voice-log-text').textContent = text.length > 28 ? text.slice(0,28)+'…' : text;
 }
 
 // ══════════════════════════════════════
@@ -876,7 +874,7 @@ function startGPS() {
 }
 
 function stopGPS() {
-  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId=null; }
 }
 
 function onGPSUpdate(pos) {
@@ -886,28 +884,21 @@ function onGPSUpdate(pos) {
   // 歩行距離
   if (lastWalkPos) {
     const d = haversine(lastWalkPos.lat, lastWalkPos.lng, lat, lng);
-    if (d < 50) { // GPS飛びを除外
-      totalWalkDist += d;
-      document.getElementById('walk-dist-val').textContent = formatDist(totalWalkDist);
-    }
+    if (d < 50) { totalWalkDist += d; document.getElementById('walk-val').textContent = formatDist(totalWalkDist); }
   }
   lastWalkPos = { lat, lng };
 
-  // 地図更新
+  // 地図現在地
   if (leafletMap) {
     if (!userMarker) {
-      userMarker = L.circleMarker([lat, lng], {
-        radius:8, fillColor:var_green(), fillOpacity:.9, color:'white', weight:2
-      }).addTo(leafletMap);
-    } else {
-      userMarker.setLatLng([lat, lng]);
-    }
+      userMarker = L.circleMarker([lat,lng], { radius:8, fillColor:'#3A7A4A', fillOpacity:.9, color:'white', weight:2 }).addTo(leafletMap);
+    } else { userMarker.setLatLng([lat,lng]); }
   }
 
   // 施設チェック
-  getActiveFacilities().forEach(f => {
+  allFacilities.filter(isActive).forEach(f => {
     if (announcedFacilities.has(f.facility_id)) return;
-    const d = haversine(lat, lng, f.lat, f.lng);
+    const d = haversine(lat,lng,f.lat,f.lng);
     if (d <= f.trigger_dist) {
       announcedFacilities.add(f.facility_id);
       showFacilityToast(f);
@@ -916,16 +907,23 @@ function onGPSUpdate(pos) {
   });
 
   // スポット距離
-  const spot = courseSpots[currentSpotIndex];
+  const spot = courseSpots[currentIdx];
   if (!spot) return;
-  const dist = Math.round(haversine(lat, lng, spot.lat, spot.lng));
+  const dist = Math.round(haversine(lat,lng,spot.lat,spot.lng));
+  arLastDist = dist;
   updateDistanceUI(dist, spot);
 
-  if (!arrivedDetected && dist <= spot.arrive_dist) {
-    arrivedDetected = true;
-    autoArrive();
-    return;
+  // AR距離更新
+  if (document.getElementById('screen-ar').classList.contains('active')) {
+    document.getElementById('ar-dist').innerHTML = `${dist}<span>m</span>`;
   }
+
+  // ARボタン表示
+  const btnAR = document.getElementById('btn-ar');
+  if (dist <= spot.approach_dist) { btnAR.classList.add('show'); }
+
+  // 到着判定
+  if (!arrivedDetected && dist <= spot.arrive_dist) { arrivedDetected = true; autoArrive(); return; }
   if (!approachNotified && dist <= spot.approach_dist && dist > spot.arrive_dist) {
     approachNotified = true;
     playVoice(spot.audio_approach, `まもなく${spot.spot_name}です。あと少しです。`);
@@ -933,27 +931,25 @@ function onGPSUpdate(pos) {
 }
 
 function onGPSError(err) {
-  const msgs = {1:'位置情報が許可されていません',2:'位置を取得できません',3:'タイムアウト'};
-  setGPSStatus('error', msgs[err.code]||'GPS Error');
-  setVoiceLog('⚠️','手動の「着いた！」ボタンをご利用ください');
+  const m = {1:'位置情報が許可されていません',2:'位置を取得できません',3:'タイムアウト'};
+  setGPSStatus('error', m[err.code]||'GPS Error');
+  setVoiceLog('⚠️','手動「着いた！」ボタンをご利用ください');
 }
 
-function setGPSStatus(state, label) {
-  document.getElementById('gps-dot').className = 'gps-dot ' + state;
-  document.getElementById('gps-label').textContent = label;
+function setGPSStatus(s,l) {
+  document.getElementById('gps-dot').className='gps-dot '+s;
+  document.getElementById('gps-label').textContent=l;
 }
-
-function var_green() { return '#3A7A4A'; }
 
 // ══════════════════════════════════════
 // 施設トースト
 // ══════════════════════════════════════
 function showFacilityToast(f) {
-  const toast = document.getElementById('facility-toast');
+  const t = document.getElementById('facility-toast');
   document.getElementById('facility-toast-text').textContent = `${f.facility_name}：${f.announce_text}`;
-  toast.classList.add('show');
-  if (facilityToastTimer) clearTimeout(facilityToastTimer);
-  facilityToastTimer = setTimeout(() => toast.classList.remove('show'), 6000);
+  t.classList.add('show');
+  if (facilityTimer) clearTimeout(facilityTimer);
+  facilityTimer = setTimeout(() => t.classList.remove('show'), 6000);
 }
 
 // ══════════════════════════════════════
@@ -962,27 +958,24 @@ function showFacilityToast(f) {
 function updateDistanceUI(dist, spot) {
   const panel = document.getElementById('distance-panel');
   document.getElementById('dist-number').innerHTML = `${dist}<span>m</span>`;
-  const maxDist = 500;
-  const ratio = Math.min(1, (maxDist - dist) / maxDist);
-  const circ = 126;
-  document.getElementById('ring-fill').style.strokeDashoffset = circ - (ratio * circ);
-  document.getElementById('ring-label').textContent = dist <= 999 ? dist+'m' : '遠';
-
+  const ratio = Math.min(1,(500-dist)/500);
+  document.getElementById('ring-fill').style.strokeDashoffset = 113-(ratio*113);
+  document.getElementById('ring-label').textContent = dist<=999?dist+'m':'遠';
   panel.classList.remove('near','arrived');
   if (dist <= spot.arrive_dist) {
     panel.classList.add('arrived');
-    document.getElementById('dist-icon').textContent = '🎯';
-    document.getElementById('dist-status').textContent = '到着しました！';
-    document.getElementById('ring-fill').style.stroke = 'var(--green)';
+    document.getElementById('dist-icon').textContent='🎯';
+    document.getElementById('dist-status').textContent='到着しました！';
+    document.getElementById('ring-fill').style.stroke='var(--green)';
   } else if (dist <= spot.approach_dist) {
     panel.classList.add('near');
-    document.getElementById('dist-icon').textContent = '🏃';
-    document.getElementById('dist-status').textContent = `もうすぐです！（到着判定: ${spot.arrive_dist}m以内）`;
-    document.getElementById('ring-fill').style.stroke = '#f0a040';
+    document.getElementById('dist-icon').textContent='🏃';
+    document.getElementById('dist-status').textContent=`もうすぐです！（到着判定: ${spot.arrive_dist}m以内）`;
+    document.getElementById('ring-fill').style.stroke='#f0a040';
   } else {
-    document.getElementById('dist-icon').textContent = '🚶';
-    document.getElementById('dist-status').textContent = `${spot.spot_name} まで（到着判定: ${spot.arrive_dist}m以内）`;
-    document.getElementById('ring-fill').style.stroke = 'var(--vermillion)';
+    document.getElementById('dist-icon').textContent='🚶';
+    document.getElementById('dist-status').textContent=`${spot.spot_name} まで（到着判定: ${spot.arrive_dist}m以内）`;
+    document.getElementById('ring-fill').style.stroke='var(--primary)';
   }
 }
 
@@ -990,52 +983,78 @@ function updateDistanceUI(dist, spot) {
 // Leafletマップ
 // ══════════════════════════════════════
 function initMap() {
-  if (leafletMap) { leafletMap.remove(); leafletMap = null; userMarker = null; destMarker = null; routeLine = null; }
-
-  const spot = courseSpots[currentSpotIndex];
-  leafletMap = L.map('leaflet-map', { zoomControl:false, attributionControl:false })
-    .setView([spot.lat, spot.lng], 16);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(leafletMap);
+  if (leafletMap) { leafletMap.remove(); leafletMap=null; userMarker=null; destMarker=null; destCircle=null; }
+  const spot = courseSpots[currentIdx];
+  leafletMap = L.map('leaflet-map',{zoomControl:false,attributionControl:false}).setView([spot.lat,spot.lng],16);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(leafletMap);
 
   // ルート線
-  const routeCoords = courseSpots.map(s => [s.lat, s.lng]);
-  routeLine = L.polyline(routeCoords, {
-    color:'#B83232', weight:2, dashArray:'5 5', opacity:.5
-  }).addTo(leafletMap);
+  const coords = courseSpots.map(s=>[s.lat,s.lng]);
+  L.polyline(coords,{color:'#B83232',weight:2,dashArray:'5 5',opacity:.45}).addTo(leafletMap);
 
-  // 全スポットに小ピン
-  courseSpots.forEach((s, i) => {
-    const isLast = i === courseSpots.length - 1;
-    L.circleMarker([s.lat, s.lng], {
-      radius: isLast ? 7 : 5,
-      fillColor: isLast ? '#9A7A3A' : '#B83232',
-      fillOpacity:.7, color:'white', weight:1.5
+  // 全スポットにミニピン
+  courseSpots.forEach((s,i) => {
+    L.circleMarker([s.lat,s.lng],{
+      radius:i===courseSpots.length-1?7:5,
+      fillColor:i===courseSpots.length-1?'#9A7A3A':'#B83232',
+      fillOpacity:.65, color:'white', weight:1.5
     }).addTo(leafletMap).bindPopup(s.spot_name);
   });
 
   updateMapDest();
-  setTimeout(() => leafletMap.invalidateSize(), 200);
+  setTimeout(()=>leafletMap.invalidateSize(),200);
 }
 
 function updateMapDest() {
   if (!leafletMap) return;
-  const spot = courseSpots[currentSpotIndex];
-
+  const spot = courseSpots[currentIdx];
   if (destMarker) leafletMap.removeLayer(destMarker);
-  const icon = L.divIcon({
-    html:`<div style="background:#B83232;width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>`,
-    iconSize:[20,20], iconAnchor:[10,20], className:''
-  });
-  destMarker = L.marker([spot.lat, spot.lng], {icon}).addTo(leafletMap).bindPopup(spot.spot_name);
+  if (destCircle) leafletMap.removeLayer(destCircle);
+  const icon = L.divIcon({ html:`<div style="background:var(--primary,#B83232);width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`, iconSize:[18,18], iconAnchor:[9,18], className:'' });
+  destMarker = L.marker([spot.lat,spot.lng],{icon}).addTo(leafletMap).bindPopup(spot.spot_name);
+  destCircle = L.circle([spot.lat,spot.lng],{ radius:spot.arrive_dist, color:'#B83232', fillColor:'#B83232', fillOpacity:.07, weight:1, dashArray:'4 4' }).addTo(leafletMap);
+  leafletMap.setView([spot.lat,spot.lng],16);
+}
 
-  // 到着レンジサークル
-  L.circle([spot.lat, spot.lng], {
-    radius:spot.arrive_dist, color:'#B83232',
-    fillColor:'#B83232', fillOpacity:.07, weight:1, dashArray:'4 4'
-  }).addTo(leafletMap);
+// ══════════════════════════════════════
+// AR
+// ══════════════════════════════════════
+async function openAR() {
+  showScreen('screen-ar');
+  const spot = courseSpots[currentIdx];
+  document.getElementById('ar-spot-name').textContent = spot.spot_name;
+  document.getElementById('ar-dist').innerHTML = `${arLastDist}<span>m</span>`;
 
-  leafletMap.setView([spot.lat, spot.lng], 16);
+  try {
+    arStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
+    document.getElementById('ar-video').srcObject = arStream;
+  } catch(e) { document.getElementById('ar-compass').textContent = 'カメラ非対応'; }
+
+  // 方位センサー
+  if (window.DeviceOrientationEvent) {
+    window.addEventListener('deviceorientation', onDeviceOrientation);
+  }
+}
+
+function onDeviceOrientation(e) {
+  if (!lastWalkPos) return;
+  const spot = courseSpots[currentIdx];
+  const targetBearing = bearing(lastWalkPos.lat, lastWalkPos.lng, spot.lat, spot.lng);
+  const deviceHeading = e.webkitCompassHeading || (e.alpha ? 360 - e.alpha : 0);
+  const relative = (targetBearing - deviceHeading + 360) % 360;
+
+  // 矢印の向き
+  const arrows = ['↑','↗','→','↘','↓','↙','←','↖'];
+  const idx = Math.round(relative / 45) % 8;
+  document.getElementById('ar-arrow').textContent = arrows[idx];
+  document.getElementById('ar-compass').textContent = `目標方位: ${Math.round(targetBearing)}°`;
+}
+
+function closeAR() {
+  if (arStream) { arStream.getTracks().forEach(t=>t.stop()); arStream=null; }
+  window.removeEventListener('deviceorientation', onDeviceOrientation);
+  showScreen('screen-nav');
+  setTimeout(()=>{ if(leafletMap) leafletMap.invalidateSize(); },100);
 }
 
 // ══════════════════════════════════════
@@ -1044,109 +1063,62 @@ function updateMapDest() {
 function buildSpotsRow() {
   const row = document.getElementById('spots-row');
   row.innerHTML = '';
-  courseSpots.forEach((spot, i) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'spot-dot-wrap';
-    const lineRow = document.createElement('div');
-    lineRow.className = 'dot-line-row';
-
-    if (i > 0) {
-      const line = document.createElement('div');
-      line.className = 'dot-line' + (i <= currentSpotIndex ? ' done' : '');
-      lineRow.appendChild(line);
-    }
-
+  courseSpots.forEach((spot,i) => {
+    const wrap = document.createElement('div'); wrap.className='spot-dot-wrap';
+    const lineRow = document.createElement('div'); lineRow.className='dot-line-row';
+    if (i>0) { const l=document.createElement('div'); l.className='dot-line'+(i<=currentIdx?' done':''); lineRow.appendChild(l); }
     const dot = document.createElement('div');
     let cls = 'spot-dot';
-    if (i < currentSpotIndex) cls += ' done';
-    else if (i === currentSpotIndex) cls += ' current';
-    dot.className = cls;
-    dot.textContent = spot.order;
+    if (i<currentIdx) cls+=' done'; else if (i===currentIdx) cls+=' current';
+    dot.className=cls; dot.textContent=spot.order;
     lineRow.appendChild(dot);
-
-    if (i < courseSpots.length - 1) {
-      const line2 = document.createElement('div');
-      line2.className = 'dot-line' + (i < currentSpotIndex ? ' done' : '');
-      lineRow.appendChild(line2);
-    }
-
-    const label = document.createElement('div');
-    label.className = 'spot-dot-label';
-    label.textContent = spot.spot_name;
-    wrap.appendChild(lineRow);
-    wrap.appendChild(label);
-    row.appendChild(wrap);
+    if (i<courseSpots.length-1) { const l2=document.createElement('div'); l2.className='dot-line'+(i<currentIdx?' done':''); lineRow.appendChild(l2); }
+    const label=document.createElement('div'); label.className='spot-dot-label'; label.textContent=spot.spot_name;
+    wrap.appendChild(lineRow); wrap.appendChild(label); row.appendChild(wrap);
   });
 }
 
 function updateNavScreen() {
-  const spot = courseSpots[currentSpotIndex];
-  const progress = (currentSpotIndex / (courseSpots.length - 1)) * 100;
-  document.getElementById('progress-fill').style.width = progress + '%';
-  document.getElementById('nav-step-label').textContent = `STEP ${currentSpotIndex+1} / ${courseSpots.length}`;
-  document.getElementById('nav-spot-name').textContent = spot.spot_name + ' へ';
+  const spot = courseSpots[currentIdx];
+  const progress = courseSpots.length>1 ? (currentIdx/(courseSpots.length-1))*100 : 100;
+  document.getElementById('progress-fill').style.width = progress+'%';
+  document.getElementById('nav-step-label').textContent = `STEP ${currentIdx+1} / ${courseSpots.length}`;
+  document.getElementById('nav-spot-name').textContent = spot.spot_name+' へ';
   buildSpotsRow();
-
-  approachNotified = false;
-  arrivedDetected = false;
-
-  document.getElementById('dist-number').innerHTML = '--<span>m</span>';
-  document.getElementById('dist-status').textContent = `GPS確認中（到着判定: ${spot.arrive_dist}m以内）`;
-  document.getElementById('ring-fill').style.strokeDashoffset = 126;
-  document.getElementById('ring-label').textContent = '--';
-  document.getElementById('distance-panel').className = 'distance-panel';
+  approachNotified=false; arrivedDetected=false;
+  document.getElementById('dist-number').innerHTML='--<span>m</span>';
+  document.getElementById('dist-status').textContent=`GPS確認中（到着判定: ${spot.arrive_dist}m以内）`;
+  document.getElementById('ring-fill').style.strokeDashoffset=113;
+  document.getElementById('ring-label').textContent='--';
+  document.getElementById('distance-panel').className='distance-panel';
+  document.getElementById('btn-ar').classList.remove('show');
 }
 
 // ══════════════════════════════════════
 // 到着
 // ══════════════════════════════════════
-function autoArrive() { showExplain(courseSpots[currentSpotIndex]); playVoice(courseSpots[currentSpotIndex].audio_arrive, buildArriveText(courseSpots[currentSpotIndex])); }
-function manualArrive() { showExplain(courseSpots[currentSpotIndex]); playVoice(courseSpots[currentSpotIndex].audio_arrive, buildArriveText(courseSpots[currentSpotIndex])); }
-
-function buildArriveText(spot) {
-  return `${spot.spot_name}に到着しました。${spot.description}`;
-}
+function autoArrive() { showExplain(courseSpots[currentIdx]); playVoice(courseSpots[currentIdx].audio_arrive, `${courseSpots[currentIdx].spot_name}に到着しました。${courseSpots[currentIdx].description}`); }
+function manualArrive() { showExplain(courseSpots[currentIdx]); playVoice(courseSpots[currentIdx].audio_arrive, `${courseSpots[currentIdx].spot_name}に到着しました。${courseSpots[currentIdx].description}`); }
 
 function showExplain(spot) {
-  const numLabel = spot.order;
-  const isLast = currentSpotIndex === courseSpots.length - 1;
-
-  document.getElementById('explain-num-bg').textContent = numLabel;
+  const isLast = currentIdx === courseSpots.length-1;
+  document.getElementById('explain-num-bg').textContent = spot.order;
   document.getElementById('explain-badge').textContent = `SPOT ${spot.order} ／ ${currentCourse.course_name}`;
   document.getElementById('explain-title').textContent = spot.spot_name;
   document.getElementById('explain-text').textContent = spot.description;
 
   // 写真
-  const photoArea = document.getElementById('photo-area');
-  const placeholder = document.getElementById('photo-placeholder');
-  const existingImg = photoArea.querySelector('img');
-  if (existingImg) existingImg.remove();
-
+  const pa = document.getElementById('photo-area');
+  const ph = document.getElementById('photo-placeholder');
+  const ei = pa.querySelector('img'); if (ei) ei.remove();
   if (spot.photo_id) {
-    const img = document.createElement('img');
-    img.src = `https://drive.google.com/uc?export=view&id=${spot.photo_id}`;
-    img.alt = spot.spot_name;
-    img.draggable = false;
-    img.oncontextmenu = () => false;
-    placeholder.style.display = 'none';
-    photoArea.insertBefore(img, photoArea.firstChild);
-  } else {
-    placeholder.style.display = 'flex';
-  }
+    const img=document.createElement('img'); img.src=DRIVE_BASE+spot.photo_id; img.alt=spot.spot_name; img.draggable=false; img.oncontextmenu=()=>false;
+    ph.style.display='none'; pa.insertBefore(img,pa.firstChild);
+  } else { ph.style.display='flex'; }
 
   // キーワード
-  const kwDiv = document.getElementById('explain-keywords');
-  kwDiv.innerHTML = '';
-  if (spot.keywords) {
-    spot.keywords.split(',').forEach(kw => {
-      kw = kw.trim();
-      if (!kw) return;
-      const span = document.createElement('span');
-      span.className = 'explain-keyword';
-      span.textContent = kw;
-      kwDiv.appendChild(span);
-    });
-  }
+  const kw = document.getElementById('explain-keywords'); kw.innerHTML='';
+  if (spot.keywords) spot.keywords.split(',').forEach(k => { k=k.trim(); if(!k)return; const s=document.createElement('span'); s.className='explain-keyword'; s.textContent=k; kw.appendChild(s); });
 
   document.getElementById('btn-next').textContent = isLast ? '🏮 表彰状を受け取る' : '次のスポットへ →';
   showScreen('screen-explain');
@@ -1156,32 +1128,30 @@ function showExplain(spot) {
 // ナビゲーション
 // ══════════════════════════════════════
 function nextSpot() {
-  if (currentSpotIndex === courseSpots.length - 1) {
+  const isLast = currentIdx === courseSpots.length-1;
+  const maxOrder = Math.max(...courseSpots.map(s=>s.order));
+
+  if (isLast) {
     stopGPS();
-    const today = new Date().toISOString();
-    savePrize('course_' + currentCourse.course_id, today);
+    savePrize('course_'+currentCourse.course_id, new Date().toISOString());
     showGoal();
     return;
   }
-  currentSpotIndex++;
+
+  currentIdx++;
   updateNavScreen();
   updateMapDest();
   showScreen('screen-nav');
-  const next = courseSpots[currentSpotIndex];
-  const isLast = currentSpotIndex === courseSpots.length - 1;
-  const nextText = isLast
+
+  const next = courseSpots[currentIdx];
+  const prevSpot = courseSpots[currentIdx-1];
+  const isNextLast = currentIdx === courseSpots.length-1;
+
+  const nextText = isNextLast
     ? `ゴールの${next.spot_name}へ向かいましょう。`
     : `次は${next.spot_name}です。`;
-  setTimeout(() => playVoice(courseSpots[currentSpotIndex-1].audio_next, nextText), 500);
-}
 
-function restart() {
-  stopGPS();
-  currentCourse = null;
-  courseSpots = [];
-  currentSpotIndex = 0;
-  renderCourseList();
-  showScreen('screen-courses');
+  setTimeout(() => playVoice(prevSpot.audio_next, nextText), 500);
 }
 
 // ══════════════════════════════════════
@@ -1189,103 +1159,78 @@ function restart() {
 // ══════════════════════════════════════
 function showGoal() {
   const today = new Date();
-  document.getElementById('cert-date').textContent = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日 達成`;
-  document.getElementById('cert-course-name').textContent = currentCourse.course_name;
-  document.getElementById('cert-walk-dist').innerHTML = `${Math.round(totalWalkDist)}<span class="cert-stat-unit">m</span>`;
-  document.getElementById('cert-spot-count').innerHTML = `${courseSpots.length}<span class="cert-stat-unit">箇所</span>`;
+  const specialActive = isSpecialActive(currentCourse);
 
-  const certSpots = document.getElementById('cert-spots');
-  certSpots.innerHTML = '';
-  courseSpots.forEach(spot => {
-    const wrap = document.createElement('div');
-    wrap.className = 'cert-spot-badge';
-    wrap.innerHTML = `
-      <div class="cert-dot">${spot.order}</div>
-      <div class="cert-spot-name">${spot.spot_name}</div>
-    `;
-    certSpots.appendChild(wrap);
+  document.getElementById('cert-course').textContent = currentCourse.course_name;
+  document.getElementById('cert-date').textContent = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日 達成`;
+  document.getElementById('cert-dist').innerHTML = `${Math.round(totalWalkDist)}<span class="cert-stat-unit">m</span>`;
+  document.getElementById('cert-count').innerHTML = `${courseSpots.length}<span class="cert-stat-unit">箇所</span>`;
+
+  const cs = document.getElementById('cert-spots'); cs.innerHTML='';
+  courseSpots.forEach(s => {
+    const w=document.createElement('div'); w.className='cert-spot-badge';
+    w.innerHTML=`<div class="cert-dot">${s.order}</div><div class="cert-spot-name">${s.spot_name}</div>`;
+    cs.appendChild(w);
   });
 
   showScreen('screen-goal');
-  setTimeout(() => speakTTS(`おめでとうございます。${currentCourse.course_name}を完走しました。本日の歩行距離は約${Math.round(totalWalkDist)}メートルです。`), 600);
+
+  // ゴールアナウンス
+  const lastSpot = courseSpots[courseSpots.length-1];
+  const goalText = `おめでとうございます。${currentCourse.course_name}を完走しました。本日の歩行距離は約${Math.round(totalWalkDist)}メートルです。`;
+
+  if (specialActive && currentCourse.audio_special_goal) {
+    playVoice(lastSpot.audio_goal, goalText, () => {
+      setTimeout(() => playVoice(currentCourse.audio_special_goal, ''), 500);
+    });
+  } else {
+    playVoice(lastSpot.audio_goal, goalText);
+  }
 }
 
 // ══════════════════════════════════════
-// プライズ管理
+// プライズ
 // ══════════════════════════════════════
-function loadPrizes() {
-  try { return JSON.parse(localStorage.getItem('masuda_prizes') || '{}'); } catch { return {}; }
-}
-
-function savePrize(prizeId, date) {
-  const data = loadPrizes();
-  data[prizeId] = date;
-  localStorage.setItem('masuda_prizes', JSON.stringify(data));
-}
-
 function renderPrizes() {
   const prizes = loadPrizes();
-  const body = document.getElementById('prizes-body');
-  body.innerHTML = '';
+  const body = document.getElementById('prizes-body'); body.innerHTML='';
+  const completed=[], locked=[];
 
-  const completedPrizes = [];
-  const lockedPrizes = [];
-
-  allCourses.forEach(course => {
-    const prizeId = 'course_' + course.course_id;
-    const item = {
-      id: prizeId,
-      name: course.course_name,
-      icon: '🏮',
-      desc: `${course.course_name}を完走`
-    };
-    if (prizes[prizeId]) {
-      item.date = prizes[prizeId];
-      completedPrizes.push(item);
-    } else {
-      lockedPrizes.push(item);
-    }
+  allCourses.forEach(c => {
+    const pid='course_'+c.course_id;
+    const item={ id:pid, name:c.course_name, icon:'🏮', desc:`${c.course_name}を完走` };
+    if (prizes[pid]) { item.date=prizes[pid]; completed.push(item); } else locked.push(item);
   });
 
-  if (completedPrizes.length === 0 && lockedPrizes.length === 0) {
-    body.innerHTML = `<div class="empty-prizes"><div class="empty-icon">🏅</div>まだプライズはありません。<br>まち歩きを完走すると<br>プライズが獲得できます。</div>`;
+  if (completed.length===0 && locked.length===0) {
+    body.innerHTML=`<div class="empty-prizes"><div class="empty-icon">🏅</div>まだプライズはありません。<br>まち歩きを完走すると獲得できます。</div>`;
     return;
   }
 
-  if (completedPrizes.length > 0) {
-    const lbl = document.createElement('div');
-    lbl.className = 'prizes-section-label';
-    lbl.textContent = `COMPLETED — ${completedPrizes.length}件`;
-    body.appendChild(lbl);
-    completedPrizes.forEach(p => body.appendChild(makePrizeCard(p, true)));
+  if (completed.length>0) {
+    const l=document.createElement('div'); l.className='prizes-section-label'; l.textContent=`COMPLETED — ${completed.length}件`; body.appendChild(l);
+    completed.forEach(p=>body.appendChild(makePrizeCard(p,true)));
   }
-
-  if (lockedPrizes.length > 0) {
-    const lbl = document.createElement('div');
-    lbl.className = 'prizes-section-label';
-    lbl.style.marginTop = '20px';
-    lbl.textContent = `LOCKED — ${lockedPrizes.length}件`;
-    body.appendChild(lbl);
-    lockedPrizes.forEach(p => body.appendChild(makePrizeCard(p, false)));
+  if (locked.length>0) {
+    const l=document.createElement('div'); l.className='prizes-section-label'; l.style.marginTop='16px'; l.textContent=`LOCKED — ${locked.length}件`; body.appendChild(l);
+    locked.forEach(p=>body.appendChild(makePrizeCard(p,false)));
   }
 }
 
 function makePrizeCard(prize, done) {
-  const card = document.createElement('div');
-  card.className = 'prize-card ' + (done ? 'completed' : 'locked');
-  card.innerHTML = `
-    ${done ? '<div class="prize-card-bar"></div>' : ''}
-    <div class="prize-card-icon">${done ? prize.icon : '🔒'}</div>
+  const card=document.createElement('div'); card.className='prize-card '+(done?'completed':'locked');
+  card.innerHTML=`
+    ${done?'<div class="prize-card-bar"></div>':''}
+    <div class="prize-card-icon">${done?prize.icon:'🔒'}</div>
     <div class="prize-card-info">
       <div class="prize-card-name">${prize.name}</div>
       <div class="prize-card-desc">${prize.desc}</div>
-      ${done ? `<div class="prize-card-date">✓ ${formatDate(prize.date)} 達成</div>` : ''}
+      ${done?`<div class="prize-card-date">✓ ${formatDate(prize.date)} 達成</div>`:''}
     </div>
     <div class="prize-card-status">
-      <div class="prize-status-icon">${done ? '🥇' : '🔒'}</div>
-      <div class="prize-status-label">${done ? '獲得済み' : '未達成'}</div>
-    </div>
-  `;
+      <div class="prize-status-icon">${done?'🥇':'🔒'}</div>
+      <div class="prize-status-label">${done?'獲得済み':'未達成'}</div>
+    </div>`;
   return card;
 }
 
@@ -1297,7 +1242,12 @@ window.addEventListener('load', () => {
     speechSynthesis.getVoices();
     speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
   }
-  loadAllData();
+  // Googleフォントを動的に読み込み
+  const link = document.createElement('link');
+  link.rel='stylesheet';
+  link.href='https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap';
+  document.head.appendChild(link);
+  initApp();
 });
 </script>
 </body>
