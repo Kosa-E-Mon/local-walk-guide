@@ -778,32 +778,52 @@ function selectCourse(course) {
   // スタートアナウンス
   setTimeout(() => {
     const caution = getCaution(course.course_type);
+    const cautionUrl = getCautionUrl(course.course_type);
     const startSpot = courseSpots[0];
     const specialActive = isSpecialActive(course);
+    const startText = `${caution}最初の目的地は${startSpot.spot_name}です。`;
+
+    // 注意喚起 → スタート音声 の順で連鎖再生する関数
+    function playStart() {
+      if (startSpot.audio_start_url) {
+        playVoice(startSpot.audio_start_url, startText);
+      } else {
+        speakTTS(startText);
+      }
+    }
+
+    function playCautionThenStart() {
+      if (cautionUrl) {
+        playVoice(cautionUrl, caution, () => setTimeout(playStart, 300));
+      } else if (caution) {
+        speakTTS(caution, () => setTimeout(playStart, 300));
+      } else {
+        playStart();
+      }
+    }
 
     if (specialActive && course.audio_special_start_url) {
       playVoice(course.audio_special_start_url, `特別アナウンスです。`, () => {
-        if (startSpot.audio_start_url) {
-          playVoice(startSpot.audio_start_url, `${caution}最初の目的地は${startSpot.spot_name}です。`);
-        } else {
-          speakTTS(`${caution}最初の目的地は${startSpot.spot_name}です。`);
-        }
+        setTimeout(playCautionThenStart, 300);
       });
     } else {
-      if (startSpot.audio_start_url) {
-        playVoice(startSpot.audio_start_url, `${caution}最初の目的地は${startSpot.spot_name}です。`);
-      } else {
-        speakTTS(`${caution}最初の目的地は${startSpot.spot_name}です。`);
-      }
+      playCautionThenStart();
     }
   }, 800);
 }
 
 function getCaution(type) {
-  if (type === '市街地') return '交通規則にしたがって歩いてください。歩きスマホにならないようご注意ください。';
-  if (type === '公園') return '園内の段差や凹凸にお気をつけながら、景色をお楽しみください。';
-  if (type === '混在') return '交通規則にしたがって歩いてください。歩きスマホや足元にもご注意ください。';
+  if (type === '市街地') return cfg.caution_shigaichi || '交通規則にしたがって歩いてください。歩きスマホにならないようご注意ください。';
+  if (type === '公園')  return cfg.caution_koen      || '園内の段差や凹凸にお気をつけながら、景色をお楽しみください。';
+  if (type === '混在')  return cfg.caution_konzai    || '交通規則にしたがって歩いてください。歩きスマホや足元にもご注意ください。';
   return '';
+}
+
+function getCautionUrl(type) {
+  if (type === '市街地') return cfg.caution_shigaichi_url || null;
+  if (type === '公園')  return cfg.caution_koen_url      || null;
+  if (type === '混在')  return cfg.caution_konzai_url    || null;
+  return null;
 }
 
 // ══════════════════════════════════════
