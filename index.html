@@ -292,6 +292,59 @@ body {
 .btn-back { margin: 0 20px 24px; background: var(--ink); color: var(--paper); border: none; padding: 13px; font-family: var(--font-title); font-size: 13px; letter-spacing: .12em; border-radius: var(--radius); cursor: pointer; width: calc(100% - 40px); }
 .btn-back:active { opacity: .8; }
 
+/* ══ STAMPS（御朱印帳） ══ */
+#screen-stamps { background: var(--bg); }
+.stamps-header { background: var(--ink); color: var(--paper); padding: 24px 22px 18px; }
+.stamps-header-badge { font-size: 10px; letter-spacing: .2em; color: var(--primary); border: 1px solid rgba(184,50,50,.4); padding: 2px 9px; display: inline-block; margin-bottom: 7px; }
+.stamps-header-title { font-family: var(--font-title); font-size: 22px; font-weight: 700; }
+.stamps-header-sub { font-size: 11px; color: rgba(250,247,241,.3); margin-top: 4px; letter-spacing: .06em; }
+.stamps-body { padding: 20px 16px; flex: 1; overflow-y: auto; }
+.stamps-book {
+  background: var(--paper); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 16px;
+  background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(212,201,176,.4) 39px, rgba(212,201,176,.4) 40px);
+  position: relative;
+}
+.stamps-book::before {
+  content: ''; position: absolute; left: 44px; top: 0; bottom: 0; width: 1px;
+  background: rgba(184,50,50,.12);
+}
+.stamps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.stamp-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.stamp-circle {
+  width: 100px; height: 100px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; gap: 2px;
+}
+.stamp-circle.done {
+  background: radial-gradient(circle, rgba(184,50,50,.15) 0%, rgba(184,50,50,.05) 70%, transparent 100%);
+  border: 3px solid var(--primary);
+  box-shadow: inset 0 0 12px rgba(184,50,50,.1);
+}
+.stamp-circle.done::after {
+  content: ''; position: absolute; inset: 4px;
+  border: 1px solid rgba(184,50,50,.25); border-radius: 50%;
+}
+.stamp-circle.locked {
+  border: 2px dashed rgba(212,201,176,.6);
+  background: transparent;
+}
+.stamp-icon { font-size: 28px; position: relative; z-index: 1; }
+.stamp-icon.locked-icon { font-size: 20px; opacity: .2; }
+.stamp-date-in { font-size: 9px; color: var(--primary); letter-spacing: .06em; font-family: var(--font-title); position: relative; z-index: 1; line-height: 1.3; text-align: center; }
+.stamp-name { font-family: var(--font-title); font-size: 11px; font-weight: 600; color: var(--ink); text-align: center; line-height: 1.4; max-width: 110px; }
+.stamp-name.locked-name { color: var(--muted); opacity: .4; }
+.stamp-where { font-size: 9px; color: var(--muted); text-align: center; }
+.stamps-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; line-height: 2.0; }
+.stamps-total { text-align: center; margin-top: 16px; font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+.stamps-total span { font-family: var(--font-title); font-size: 18px; font-weight: 700; color: var(--primary); margin: 0 2px; }
+/* プライズカード「どこで」 */
+.prize-card-where { font-size: 10px; color: var(--muted); margin-top: 2px; }
+/* プライズヘッダータブ */
+.prizes-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,.1); margin-top: 10px; }
+.prizes-tab { flex: 1; padding: 8px; text-align: center; font-size: 11px; letter-spacing: .1em; color: rgba(250,247,241,.35); cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; }
+.prizes-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
 /* ══ カスタムモーダル ══ */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(28,26,22,.78); z-index: 9999; align-items: center; justify-content: center; padding: 24px; }
 .modal-overlay.show { display: flex; animation: fadeIn .2s ease; }
@@ -431,7 +484,7 @@ body {
       <div class="cert-date" id="cert-date"></div>
       <div class="cert-share-hint">📸 スクリーンショットで記念に保存できます</div>
       <div class="cert-buttons">
-        <button class="btn-view-prizes" onclick="showScreen('screen-prizes');renderPrizes()">🏅 プライズを確認する</button>
+        <button class="btn-view-prizes" onclick="showScreen('screen-prizes');switchPrizesTab('prizes')">🏅 プライズを確認する</button>
         <button class="btn-restart-cert" onclick="goHome()">コース選択に戻る</button>
       </div>
     </div>
@@ -443,6 +496,10 @@ body {
   <div class="prizes-header">
     <div class="prizes-header-badge">MY PRIZES</div>
     <div class="prizes-header-title">獲得プライズ</div>
+    <div class="prizes-tabs">
+      <div class="prizes-tab active" id="tab-prizes" onclick="switchPrizesTab('prizes')">🏅 プライズ</div>
+      <div class="prizes-tab" id="tab-stamps" onclick="switchPrizesTab('stamps')">🔖 御朱印帳</div>
+    </div>
   </div>
   <div class="prizes-body" id="prizes-body"></div>
   <button class="btn-back" onclick="goHome()">← ホームへ戻る</button>
@@ -504,6 +561,8 @@ let leafletMap = null, userMarker = null, destMarker = null, destCircle = null;
 let totalWalkDist = 0, lastWalkPos = null;
 let facilityTimer = null;
 let arStream = null, arWatchId = null, arLastDist = 0;
+let voicePlaying = false; // 音声重複再生ロック
+let gpsLocked = false;   // スタートアナウンス中のGPS到着判定ロック
 
 // ══════════════════════════════════════
 // ローカルストレージ
@@ -512,7 +571,15 @@ function lsGet(key, def) { try { return JSON.parse(localStorage.getItem(key) ?? 
 function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
 function loadPrizes() { return lsGet('lwg_prizes', {}); }
-function savePrize(id, date) { const p = loadPrizes(); p[id] = date; lsSet('lwg_prizes', p); }
+function savePrize(id, date, area, course) {
+  const p = loadPrizes();
+  p[id] = { date, area: area || '', course: course || '' };
+  lsSet('lwg_prizes', p);
+}
+// 後方互換：旧形式（文字列）と新形式（オブジェクト）両対応
+function prizeDate(val) { return val ? (typeof val === 'string' ? val : val.date) : null; }
+function prizeArea(val) { return (val && typeof val === 'object') ? (val.area || '') : ''; }
+function prizeCourse(val) { return (val && typeof val === 'object') ? (val.course || '') : ''; }
 
 function loadAreas() { return lsGet('lwg_areas', { home: null, favorites: [], visited: [] }); }
 function saveAreas(areas) { lsSet('lwg_areas', areas); }
@@ -563,7 +630,8 @@ function sheetURL(sid, sheet) {
 async function fetchSheet(sid, sheet) {
   const res = await fetch(sheetURL(sid, sheet));
   if (!res.ok) throw new Error(`fetch failed: ${sheet}`);
-  return await res.text();
+  const text = await res.text();
+  return text.replace(/^\uFEFF/, ''); // BOM除去
 }
 
 // ══════════════════════════════════════
@@ -587,7 +655,7 @@ async function initApp() {
       fetchSheet(currentSheetId, 'facilities'),
     ]);
 
-    // config
+    // config（縦並びのkey/value形式。area_nameはプライズ・御朱印帳の「どこで」に使用）
     cfg = {};
     parseCSV(cfgCSV).forEach(r => { if (r.key) cfg[r.key] = r.value; });
     applyConfig();
@@ -655,10 +723,14 @@ function applyConfig() {
   if (cfg.app_subtitle) document.getElementById('home-subtitle').textContent = cfg.app_subtitle;
 
   // ヘッダー画像
-  if (cfg.header_type === 'image' && cfg.header_image_id) {
+  // header_image_url（GitHub Pages等の直接URL）を優先。
+  // なければ旧来の header_image_id（Drive）にフォールバック。
+  const headerImgSrc = cfg.header_image_url
+    || (cfg.header_image_id ? (drivePhotoUrl(cfg.header_image_id) || cfg.header_image_id) : null);
+  if (cfg.header_type === 'image' && headerImgSrc) {
     const img = document.createElement('img');
     img.className = 'home-header-img';
-    img.src = driveUrl(cfg.header_image_id) || cfg.header_image_id;
+    img.src = headerImgSrc;
     document.getElementById('home-header').prepend(img);
   }
 }
@@ -710,12 +782,12 @@ function renderHome() {
     }
   }
 
-  // プライズボタン
+  // プライズ・スタンプボタン
   const btnPrizes = document.createElement('button');
   btnPrizes.className = 'btn-prizes-home';
   btnPrizes.style.marginTop = '14px';
-  btnPrizes.textContent = '🏅 獲得済みプライズを見る';
-  btnPrizes.onclick = () => { showScreen('screen-prizes'); renderPrizes(); };
+  btnPrizes.textContent = '🏅 プライズ・御朱印帳を見る';
+  btnPrizes.onclick = () => { showScreen('screen-prizes'); switchPrizesTab('prizes'); };
   body.appendChild(btnPrizes);
 
   // クレジット（固定）
@@ -843,37 +915,52 @@ function startWalk(playStartAnnounce) {
 
   if (!playStartAnnounce) return;
 
+  gpsLocked = true; // スタートアナウンス中はGPS到着判定をロック
   setTimeout(() => {
-    const caution = getCaution(currentCourse.course_type);
-    const cautionUrl = getCautionUrl(currentCourse.course_type);
     const startSpot = courseSpots[0];
     const specialActive = isSpecialActive(currentCourse);
-    const startText = `${caution}最初の目的地は${startSpot.spot_name}です。`;
+    // cautionはstartTextから除去（テーマナレーションまたはcaution音声で流すため重複しない）
+    const startText = `最初の目的地は${startSpot.spot_name}です。`;
 
+    // ③ 第1スポットへ出発
     function playStart() {
       if (startSpot.audio_start_url) {
-        playVoice(startSpot.audio_start_url, startText);
+        playVoice(startSpot.audio_start_url, startText, () => { gpsLocked = false; }, true);
       } else {
-        speakTTS(startText);
+        speakTTS(startText, () => { gpsLocked = false; });
       }
     }
 
-    function playCautionThenStart() {
-      if (cautionUrl) {
-        playVoice(cautionUrl, caution, () => setTimeout(playStart, 300));
+    // ② テーマナレーション（なければ汎用caution）→ playStart へ
+    // audio_theme_url または theme_text があればテーマを流す（cautionはスキップ）。
+    // どちらもなければ汎用cautionにフォールバック。
+    function playThemeOrCaution(onDone) {
+      const themeUrl  = currentCourse.audio_theme_url;
+      const themeText = currentCourse.theme_text;
+      const caution    = getCaution(currentCourse.course_type);
+      const cautionUrl = getCautionUrl(currentCourse.course_type);
+
+      if (themeUrl) {
+        // テーマあり → cautionは一切流さない（MP3失敗時のTTSフォールバックもtheme_textのみ）
+        playVoice(themeUrl, themeText || '', () => setTimeout(onDone, 300), true);
+      } else if (themeText) {
+        speakTTS(themeText, () => setTimeout(onDone, 300));
+      } else if (cautionUrl) {
+        playVoice(cautionUrl, caution, () => setTimeout(onDone, 300), true);
       } else if (caution) {
-        speakTTS(caution, () => setTimeout(playStart, 300));
+        speakTTS(caution, () => setTimeout(onDone, 300));
       } else {
-        playStart();
+        onDone();
       }
     }
 
+    // ① イベント（special_start）→ ② テーマ/caution → ③ 第1スポット
     if (specialActive && currentCourse.audio_special_start_url) {
-      playVoice(currentCourse.audio_special_start_url, `特別アナウンスです。`, () => {
-        setTimeout(playCautionThenStart, 300);
-      });
+      playVoice(currentCourse.audio_special_start_url, '特別アナウンスです。', () => {
+        setTimeout(() => playThemeOrCaution(playStart), 300);
+      }, true);
     } else {
-      playCautionThenStart();
+      playThemeOrCaution(playStart);
     }
   }, 800);
 }
@@ -1007,47 +1094,56 @@ function unlockAudio() {
   a.play().then(() => { audioUnlocked = true; }).catch(() => {});
 }
 
-function playVoice(url, fallback, onEnd) {
+function playVoice(url, fallback, onEnd, force) {
+  // 再生中はスキップ（forceフラグで上書き可）
+  if (voicePlaying && !force) return;
   const resolved = driveUrl(url);
   if (resolved) {
     try {
       if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+      voicePlaying = true;
       const audio = new Audio(resolved);
-      audio.addEventListener('error', () => { lastVoiceUrl = null; speakTTS(fallback, onEnd); });
-      audio.addEventListener('ended', () => { if (onEnd) onEnd(); });
+      audio.addEventListener('error', () => { voicePlaying = false; lastVoiceUrl = null; speakTTS(fallback, onEnd); });
+      audio.addEventListener('ended', () => { voicePlaying = false; if (onEnd) onEnd(); });
       audio.play().then(() => {
         currentAudio = audio;
         setVoiceLog('🔊', fallback || url);
         lastVoiceText = fallback;
         lastVoiceUrl = resolved;
-      }).catch(() => { lastVoiceUrl = null; speakTTS(fallback, onEnd); });
+      }).catch(() => { voicePlaying = false; lastVoiceUrl = null; speakTTS(fallback, onEnd); });
       return;
-    } catch(e) {}
+    } catch(e) { voicePlaying = false; }
   }
   lastVoiceUrl = null;
   speakTTS(fallback, onEnd);
 }
 
 function speakTTS(text, onEnd) {
-  if (!text || !('speechSynthesis' in window)) { if (onEnd) onEnd(); return; }
+  if (!text || !('speechSynthesis' in window)) { voicePlaying = false; if (onEnd) onEnd(); return; }
   speechSynthesis.cancel();
   lastVoiceText = text;
+  voicePlaying = true;
   const u = new SpeechSynthesisUtterance(text);
   u.lang='ja-JP'; u.rate=0.88; u.pitch=1.0; u.volume=1.0;
   const v = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
   if (v) u.voice = v;
-  if (onEnd) u.onend = onEnd;
+  u.onend = () => { voicePlaying = false; if (onEnd) onEnd(); };
+  u.onerror = () => { voicePlaying = false; };
+  if (onEnd) u.onend = () => { voicePlaying = false; onEnd(); };
   setVoiceLog('🔊', text);
   speechSynthesis.speak(u);
 }
 
-// mp3があればmp3を、なければTTSで再生
+// mp3があればmp3を、なければTTSで再生（ロック強制解除して再生）
 function replayVoice() {
+  voicePlaying = false;
   if (lastVoiceUrl) {
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    voicePlaying = true;
     const audio = new Audio(lastVoiceUrl);
-    audio.addEventListener('error', () => speakTTS(lastVoiceText));
-    audio.play().then(() => { currentAudio = audio; }).catch(() => speakTTS(lastVoiceText));
+    audio.addEventListener('error', () => { voicePlaying = false; speakTTS(lastVoiceText); });
+    audio.addEventListener('ended', () => { voicePlaying = false; });
+    audio.play().then(() => { currentAudio = audio; }).catch(() => { voicePlaying = false; speakTTS(lastVoiceText); });
   } else {
     speakTTS(lastVoiceText);
   }
@@ -1116,9 +1212,9 @@ function onGPSUpdate(pos) {
   const btnAR = document.getElementById('btn-ar');
   if (dist <= spot.approach_dist) { btnAR.classList.add('show'); }
 
-  // 到着判定
-  if (!arrivedDetected && dist <= spot.arrive_dist) { arrivedDetected = true; autoArrive(); return; }
-  if (!approachNotified && dist <= spot.approach_dist && dist > spot.arrive_dist) {
+  // 到着判定（スタートアナウンス中はスキップ）
+  if (!arrivedDetected && !gpsLocked && dist <= spot.arrive_dist) { arrivedDetected = true; autoArrive(); return; }
+  if (!approachNotified && !gpsLocked && dist <= spot.approach_dist && dist > spot.arrive_dist) {
     approachNotified = true;
     playVoice(spot.audio_approach_url, `まもなく${spot.spot_name}です。あと少しです。`);
   }
@@ -1330,7 +1426,7 @@ function nextSpot() {
   if (isLast) {
     stopGPS();
     clearProgress();
-    savePrize('course_'+currentCourse.course_id, new Date().toISOString());
+    savePrize('course_'+currentCourse.course_id, new Date().toISOString(), cfg.area_name || cfg.app_title || '', currentCourse.course_name);
     showGoal();
     return;
   }
@@ -1387,6 +1483,16 @@ function showGoal() {
 }
 
 // ══════════════════════════════════════
+// プライズ・御朱印帳タブ切り替え
+// ══════════════════════════════════════
+function switchPrizesTab(tab) {
+  document.getElementById('tab-prizes').classList.toggle('active', tab === 'prizes');
+  document.getElementById('tab-stamps').classList.toggle('active', tab === 'stamps');
+  if (tab === 'prizes') renderPrizes();
+  else renderStamps();
+}
+
+// ══════════════════════════════════════
 // プライズ
 // ══════════════════════════════════════
 function renderPrizes() {
@@ -1396,8 +1502,13 @@ function renderPrizes() {
 
   allCourses.forEach(c => {
     const pid='course_'+c.course_id;
+    const val = prizes[pid];
     const item={ id:pid, name:c.course_name, icon:'🏮', desc:`${c.course_name}を完走` };
-    if (prizes[pid]) { item.date=prizes[pid]; completed.push(item); } else locked.push(item);
+    if (val) {
+      item.date = prizeDate(val);
+      item.area = prizeArea(val);
+      completed.push(item);
+    } else locked.push(item);
   });
 
   if (completed.length===0 && locked.length===0) {
@@ -1417,6 +1528,7 @@ function renderPrizes() {
 
 function makePrizeCard(prize, done) {
   const card=document.createElement('div'); card.className='prize-card '+(done?'completed':'locked');
+  const whereText = done && prize.area ? `📍 ${prize.area}` : '';
   card.innerHTML=`
     ${done?'<div class="prize-card-bar"></div>':''}
     <div class="prize-card-icon">${done?prize.icon:'🔒'}</div>
@@ -1424,12 +1536,62 @@ function makePrizeCard(prize, done) {
       <div class="prize-card-name">${prize.name}</div>
       <div class="prize-card-desc">${prize.desc}</div>
       ${done?`<div class="prize-card-date">✓ ${formatDate(prize.date)} 達成</div>`:''}
+      ${done && whereText?`<div class="prize-card-where">${whereText}</div>`:''}
     </div>
     <div class="prize-card-status">
       <div class="prize-status-icon">${done?'🥇':'🔒'}</div>
       <div class="prize-status-label">${done?'獲得済み':'未達成'}</div>
     </div>`;
   return card;
+}
+
+// ══════════════════════════════════════
+// 御朱印帳スタンプ
+// ══════════════════════════════════════
+function renderStamps() {
+  const prizes = loadPrizes();
+  const body = document.getElementById('prizes-body'); body.innerHTML='';
+
+  const completedCount = allCourses.filter(c => !!prizes['course_'+c.course_id]).length;
+  const totalCount = allCourses.length;
+
+  if (totalCount === 0) {
+    body.innerHTML=`<div class="stamps-empty"><div class="empty-icon">🔖</div>コースデータがありません。</div>`;
+    return;
+  }
+
+  const book = document.createElement('div'); book.className='stamps-book';
+  const grid = document.createElement('div'); grid.className='stamps-grid';
+
+  allCourses.forEach(c => {
+    const pid = 'course_'+c.course_id;
+    const val = prizes[pid];
+    const done = !!val;
+    const date = done ? prizeDate(val) : null;
+    const area = done ? prizeArea(val) : '';
+    const d = date ? new Date(date) : null;
+    const dateStr = d ? `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` : '';
+
+    const item = document.createElement('div'); item.className='stamp-item';
+    item.innerHTML=`
+      <div class="stamp-circle ${done?'done':'locked'}">
+        ${done
+          ? `<div class="stamp-icon">🏮</div>
+             <div class="stamp-date-in">${dateStr}</div>`
+          : `<div class="stamp-icon locked-icon">🔒</div>`}
+      </div>
+      <div class="stamp-name ${done?'':'locked-name'}">${c.course_name}</div>
+      ${done && area ? `<div class="stamp-where">📍 ${area}</div>` : ''}
+    `;
+    grid.appendChild(item);
+  });
+
+  book.appendChild(grid);
+  body.appendChild(book);
+
+  const total = document.createElement('div'); total.className='stamps-total';
+  total.innerHTML=`達成 <span>${completedCount}</span> / ${totalCount} コース`;
+  body.appendChild(total);
 }
 
 // ══════════════════════════════════════
