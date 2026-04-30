@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="現地調査">
+<title>現地調査ツール — まち歩き</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F2EC;
+  --surface: #FFFFFF;
+  --raised: #EFEBE3;
+  --border: #C0B8A8;
+  --border2: #9A907E;
+  --text: #141210;
+  --muted: #524840;
+  --dim: #8A7A6A;
+  --amber: #B05000;
+  --amber-bg: #FFF4E0;
+  --amber-border: #D06820;
+  --green: #1A6828;
+  --green-bg: #E6F5EA;
+  --green-border: #2A8838;
+  --red: #B01818;
+  --red-bg: #FFF0F0;
+  --red-border: #CC2828;
+  --blue: #0E3A90;
+  --blue-bg: #EEF3FF;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Noto Sans JP', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; }
+
+/* HEADER */
+.hdr { background: var(--surface); border-bottom: 3px solid var(--text); height: 52px; display: flex; align-items: center; padding: 0 14px; gap: 10px; flex-shrink: 0; }
+.hdr-title { font-size: 16px; font-weight: 900; letter-spacing: .03em; flex: 1; }
+.hdr-title small { font-size: 11px; font-weight: 500; color: var(--dim); }
+.gps-pill { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; font-family: var(--mono); padding: 5px 11px; border-radius: 20px; border: 2px solid var(--border); color: var(--dim); background: var(--raised); white-space: nowrap; transition: all .2s; flex-shrink: 0; }
+.gps-pill.active { border-color: var(--green-border); color: var(--green); background: var(--green-bg); }
+.gps-pill.searching { border-color: var(--amber-border); color: var(--amber); background: var(--amber-bg); animation: blink .9s infinite; }
+.gps-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+@keyframes blink { 50%{opacity:.35} }
+
+/* TOP TABS */
+.topbar { background: var(--surface); border-bottom: 2px solid var(--border); display: flex; flex-shrink: 0; }
+.tab-btn { flex: 1; padding: 10px 2px; font-family: var(--sans); font-size: 12px; font-weight: 700; color: var(--dim); border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; transition: all .12s; position: relative; }
+.tab-btn.active { color: var(--text); border-bottom-color: var(--text); }
+.tab-badge { position: absolute; top: 5px; right: 4px; background: var(--amber); color: #fff; font-size: 9px; font-weight: 900; min-width: 16px; height: 16px; border-radius: 8px; padding: 0 4px; display: none; align-items: center; justify-content: center; }
+.tab-badge.show { display: flex; }
+
+/* CONTENT */
+.content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* SECTION HEADER */
+.sec-hdr { background: var(--raised); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 7px 14px; font-size: 10px; font-weight: 700; letter-spacing: .2em; color: var(--muted); text-transform: uppercase; font-family: var(--mono); }
+
+/* FORM */
+.form-group { padding: 12px 14px 0; }
+.form-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; display: flex; align-items: baseline; gap: 6px; }
+.form-label code { font-family: var(--mono); font-size: 9px; color: var(--dim); background: var(--raised); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; font-weight: 400; }
+.req { color: var(--red); font-size: 14px; }
+.opt { font-size: 10px; color: var(--dim); font-weight: 400; }
+.field-in { width: 100%; background: var(--surface); border: 2px solid var(--border2); border-radius: 8px; color: var(--text); font-family: var(--sans); font-size: 17px; font-weight: 500; padding: 11px 13px; outline: none; -webkit-appearance: none; transition: border-color .12s; }
+.field-in:focus { border-color: var(--text); }
+.field-in.mono { font-family: var(--mono); font-size: 14px; letter-spacing: .04em; }
+.field-in.ok { border-color: var(--green-border); background: var(--green-bg); }
+.field-in.err { border-color: var(--red-border); background: var(--red-bg); }
+.field-in::placeholder { color: var(--border2); }
+.field-in[type=date] { font-family: var(--mono); font-size: 14px; }
+.id-msg { margin-top: 5px; font-size: 12px; font-weight: 700; font-family: var(--mono); display: none; padding: 6px 10px; border-radius: 6px; }
+.id-msg.ok { display: block; color: var(--green); background: var(--green-bg); border: 1.5px solid var(--green-border); }
+.id-msg.dup { display: block; color: var(--red); background: var(--red-bg); border: 1.5px solid var(--red-border); }
+
+/* GPS ROW */
+.gps-row { display: flex; gap: 8px; align-items: stretch; }
+.coord-display { flex: 1; background: var(--raised); border: 2px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: var(--mono); font-size: 13px; color: var(--dim); min-height: 50px; display: flex; flex-direction: column; justify-content: center; }
+.coord-display.has { border-color: var(--green-border); color: var(--text); font-weight: 600; background: var(--green-bg); }
+.coord-sub { font-size: 10px; opacity: .7; margin-top: 2px; font-weight: 400; }
+.btn-gps { background: var(--text); color: #fff; border: none; border-radius: 8px; font-family: var(--sans); font-size: 14px; font-weight: 700; padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; transition: opacity .12s; }
+.btn-gps:active { opacity: .7; }
+.btn-gps.loading { background: var(--amber); }
+
+/* MAP */
+.map-section { margin: 12px 14px 0; border-radius: 10px; overflow: hidden; border: 2px solid var(--border2); position: relative; }
+.map-placeholder { height: 220px; background: var(--raised); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--dim); font-size: 13px; text-align: center; padding: 24px; line-height: 1.8; }
+.map-ph-ic { font-size: 40px; opacity: .3; }
+#spot-map, #fac-map { height: 240px; display: none; }
+
+/* distance overlay */
+.dist-overlay { position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,.97); border: 2px solid var(--border2); border-radius: 8px; padding: 8px 12px; font-family: var(--mono); font-size: 12px; line-height: 1.9; z-index: 500; box-shadow: 0 2px 10px rgba(0,0,0,.12); display: none; min-width: 140px; }
+.dist-overlay.show { display: block; }
+.dist-row { display: flex; align-items: center; gap: 6px; }
+.dist-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.dist-val { font-weight: 700; }
+.dist-val.outside { color: var(--dim); }
+.dist-val.approach { color: var(--amber); }
+.dist-val.arrive { color: var(--green); }
+.map-hint { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: 10px; padding: 4px 9px; border-radius: 4px; z-index: 500; pointer-events: none; }
+
+/* RANGE */
+.range-group { display: flex; gap: 10px; padding: 12px 14px 0; }
+.range-box { flex: 1; background: var(--surface); border: 2px solid var(--border2); border-radius: 10px; padding: 10px 12px; }
+.range-box.approach-box { border-color: var(--amber-border); background: var(--amber-bg); }
+.range-box.arrive-box { border-color: var(--green-border); background: var(--green-bg); }
+.range-box.trigger-box { border-color: var(--blue); background: var(--blue-bg); flex: 1; }
+.range-lbl { font-size: 10px; font-weight: 900; letter-spacing: .05em; margin-bottom: 8px; }
+.range-lbl.approach-lbl { color: var(--amber); }
+.range-lbl.arrive-lbl { color: var(--green); }
+.range-lbl.trigger-lbl { color: var(--blue); }
+.range-controls { display: flex; align-items: center; gap: 6px; }
+.range-btn { width: 38px; height: 38px; border-radius: 8px; border: 2px solid var(--border2); background: var(--surface); font-size: 22px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text); flex-shrink: 0; user-select: none; }
+.range-btn:active { background: var(--border); }
+.range-val { flex: 1; font-family: var(--mono); font-size: 22px; font-weight: 700; text-align: center; color: var(--text); background: transparent; border: none; outline: none; -webkit-appearance: none; width: 100%; }
+.range-unit { font-size: 10px; font-weight: 600; color: var(--dim); text-align: center; margin-top: 4px; }
+
+/* PHOTO */
+.photo-section { padding: 12px 14px 0; }
+.photo-preview-wrap { border-radius: 10px; overflow: hidden; border: 2px solid var(--border2); margin-bottom: 8px; display: none; }
+.photo-preview-wrap img { width: 100%; display: block; max-height: 180px; object-fit: cover; }
+.photo-name-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; display: none; }
+.photo-name-in { flex: 1; background: var(--surface); border: 2px solid var(--border2); border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 13px; padding: 10px 12px; outline: none; }
+.photo-name-in:focus { border-color: var(--text); }
+.btn-dl { background: var(--green-bg); border: 2px solid var(--green-border); color: var(--green); border-radius: 8px; font-family: var(--sans); font-size: 13px; font-weight: 700; padding: 10px 14px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.btn-camera-label { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--raised); border: 2px dashed var(--border2); border-radius: 10px; padding: 16px; font-size: 15px; font-weight: 700; color: var(--muted); cursor: pointer; transition: background .1s; }
+.btn-camera-label:active { background: var(--border); }
+
+/* SUBMIT */
+.btn-submit { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px 14px 24px; background: var(--text); color: #fff; border: none; border-radius: 12px; font-family: var(--sans); font-size: 17px; font-weight: 900; padding: 17px; cursor: pointer; width: calc(100% - 28px); letter-spacing: .03em; transition: opacity .12s; }
+.btn-submit:active { opacity: .75; }
+
+/* HISTORY */
+.hist-item { margin: 0 14px 10px; background: var(--surface); border: 2px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; }
+.hist-badge { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; padding: 3px 8px; border-radius: 5px; flex-shrink: 0; margin-top: 2px; }
+.hist-badge.spot { background: var(--amber-bg); color: var(--amber); border: 1.5px solid var(--amber-border); }
+.hist-badge.fac { background: var(--blue-bg); color: var(--blue); border: 1.5px solid var(--blue); }
+.hist-info { flex: 1; min-width: 0; }
+.hist-id { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+.hist-name { font-size: 15px; font-weight: 700; margin-top: 2px; }
+.hist-meta { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 3px; }
+.hist-del { background: none; border: 2px solid var(--border); border-radius: 6px; color: var(--dim); font-size: 15px; cursor: pointer; padding: 6px 10px; flex-shrink: 0; }
+.hist-del:active { border-color: var(--red-border); color: var(--red); background: var(--red-bg); }
+.hist-empty { text-align: center; padding: 60px 32px; color: var(--dim); font-size: 14px; line-height: 2.4; }
+.hist-empty-ic { font-size: 48px; display: block; margin-bottom: 8px; opacity: .25; }
+.hist-top { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+.hist-count { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+/* SETTINGS */
+.sett-group { padding: 12px 14px; }
+.sett-lbl { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 6px; letter-spacing: .04em; }
+.sett-row { display: flex; gap: 8px; margin-top: 8px; }
+.btn-act { background: var(--raised); border: 2px solid var(--border2); border-radius: 8px; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 700; padding: 10px 14px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.btn-act.primary { background: var(--text); color: #fff; border-color: var(--text); flex: 1; }
+.btn-act.green { color: var(--green); border-color: var(--green-border); background: var(--green-bg); }
+.btn-act.danger { color: var(--red); border-color: var(--red-border); background: var(--red-bg); }
+.status-msg { margin-top: 8px; font-size: 12px; font-weight: 700; padding: 8px 12px; border-radius: 7px; display: none; font-family: var(--mono); line-height: 1.6; }
+.status-msg.show { display: block; }
+.status-msg.ok { background: var(--green-bg); color: var(--green); border: 1.5px solid var(--green-border); }
+.status-msg.err { background: var(--red-bg); color: var(--red); border: 1.5px solid var(--red-border); }
+.status-msg.info { background: var(--amber-bg); color: var(--amber); border: 1.5px solid var(--amber-border); }
+
+/* TOAST */
+.toast { position: fixed; top: 64px; left: 50%; transform: translateX(-50%) translateY(-10px); background: var(--text); color: #fff; border-radius: 24px; padding: 11px 22px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 20px rgba(0,0,0,.2); z-index: 9999; opacity: 0; transition: all .2s; white-space: nowrap; max-width: 92vw; text-align: center; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.ok { background: var(--green); }
+.toast.err { background: var(--red); }
+.form-end { height: 20px; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-title">📍 現地調査 <small>まち歩きガイド</small></div>
+  <div class="gps-pill" id="gps-pill"><div class="gps-dot"></div><span id="gps-txt">GPS待機</span></div>
+</div>
+
+<div class="topbar">
+  <button class="tab-btn active" id="tab-spot" onclick="showTab('spot')">📍 スポット</button>
+  <button class="tab-btn" id="tab-fac" onclick="showTab('fac')">🏢 施設</button>
+  <button class="tab-btn" id="tab-hist" onclick="showTab('hist')">📋 履歴<div class="tab-badge" id="hist-badge">0</div></button>
+  <button class="tab-btn" id="tab-sett" onclick="showTab('sett')">⚙ 設定</button>
+</div>
+
+<div class="content">
+
+<!-- SPOT -->
+<div class="screen active" id="screen-spot">
+  <div class="form-group">
+    <div class="form-label"><span class="req">*</span> スポット名 <code>spot_name</code></div>
+    <input type="text" class="field-in" id="s-name" placeholder="例: 萬福寺" autocomplete="off" oninput="onNameInput('s',this.value)">
+  </div>
+  <div class="form-group">
+    <div class="form-label"><span class="req">*</span> スポットID <code>spot_id</code></div>
+    <input type="text" class="field-in mono" id="s-id" placeholder="自動入力（編集可）" autocomplete="off" spellcheck="false" inputmode="ascii" oninput="onIdInput('s','spot')">
+    <div class="id-msg" id="s-id-msg"></div>
+  </div>
+  <div class="form-group">
+    <div class="form-label"><span class="req">*</span> 位置情報</div>
+    <div class="gps-row">
+      <div class="coord-display" id="s-coord"><div>座標未取得</div><div class="coord-sub">GPSボタンを押してください</div></div>
+      <button class="btn-gps" id="s-gps-btn" onclick="getGPS('s')">📡 GPS取得</button>
+    </div>
+  </div>
+
+  <div class="map-section" id="s-map-section">
+    <div class="map-placeholder" id="s-map-ph">
+      <div class="map-ph-ic">🗺</div>
+      GPS取得後に地図が表示されます<br>
+      <small style="font-size:11px;">マーカーをドラッグして位置を微調整できます</small>
+    </div>
+    <div id="spot-map"></div>
+    <div class="dist-overlay" id="s-dist-ov">
+      <div class="dist-row"><div class="dist-dot" style="background:#1a6828"></div>到着圏 <span id="s-ov-arrive">15</span>m</div>
+      <div class="dist-row"><div class="dist-dot" style="background:#b05000;border:1px dashed #b05000"></div>接近圏 <span id="s-ov-approach">30</span>m</div>
+      <div class="dist-row" style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;"><div class="dist-dot" style="background:#0e3a90"></div>現在距離 <span class="dist-val" id="s-dist-now">—</span>m</div>
+    </div>
+    <div class="map-hint">📌 マーカーをドラッグして調整</div>
+  </div>
+
+  <div class="range-group">
+    <div class="range-box approach-box">
+      <div class="range-lbl approach-lbl">⬛ 接近距離</div>
+      <div class="range-controls">
+        <button class="range-btn" ontouchstart="startRepeat('s','approach',-5)" onmousedown="startRepeat('s','approach',-5)" ontouchend="stopRepeat()" onmouseup="stopRepeat()">−</button>
+        <input type="number" class="range-val" id="s-approach" value="30" min="5" max="500" oninput="updateCircles('s')">
+        <button class="range-btn" ontouchstart="startRepeat('s','approach',5)" onmousedown="startRepeat('s','approach',5)" ontouchend="stopRepeat()" onmouseup="stopRepeat()">＋</button>
+      </div>
+      <div class="range-unit">m — まもなく案内</div>
+    </div>
+    <div class="range-box arrive-box">
+      <div class="range-lbl arrive-lbl">✅ 到着距離</div>
+      <div class="range-controls">
+        <button class="range-btn" ontouchstart="startRepeat('s','arrive',-3)" onmousedown="startRepeat('s','arrive',-3)" ontouchend="stopRepeat()" onmouseup="stopRepeat()">−</button>
+        <input type="number" class="range-val" id="s-arrive" value="15" min="3" max="200" oninput="updateCircles('s')">
+        <button class="range-btn" ontouchstart="startRepeat('s','arrive',3)" onmousedown="startRepeat('s','arrive',3)" ontouchend="stopRepeat()" onmouseup="stopRepeat()">＋</button>
+      </div>
+      <div class="range-unit">m — 公道から到着判定</div>
+    </div>
+  </div>
+
+  <div class="photo-section">
+    <div class="form-label" style="padding-bottom:6px;">📷 写真 <span class="opt">任意</span></div>
+    <div class="photo-preview-wrap" id="s-prev-wrap"><img id="s-prev-img" src="" alt=""></div>
+    <div class="photo-name-row" id="s-name-row">
+      <input type="text" class="photo-name-in" id="s-filename" placeholder="ファイル名（拡張子なし）">
+      <button class="btn-dl" onclick="downloadPhoto('s')">⬇ 保存</button>
+    </div>
+    <label class="btn-camera-label" for="s-photo-in">📷 タップして撮影・選択</label>
+    <input type="file" id="s-photo-in" accept="image/*" capture="environment" style="display:none" onchange="onPhoto('s',this)">
+  </div>
+
+  <button class="btn-submit" onclick="submitSpot()">✅ スポットを登録</button>
+  <div class="form-end"></div>
+</div>
+
+<!-- FACILITY -->
+<div class="screen" id="screen-fac">
+  <div class="form-group">
+    <div class="form-label"><span class="req">*</span> 施設名 <code>facility_name</code></div>
+    <input type="text" class="field-in" id="f-name" placeholder="例: 増田観光案内所" autocomplete="off" oninput="onNameInput('f',this.value)">
+  </div>
+  <div class="form-group">
+    <div class="form-label"><span class="req">*</span> 施設ID <code>facility_id</code></div>
+    <input type="text" class="field-in mono" id="f-id" placeholder="自動入力（編集可）" autocomplete="off" spellcheck="false" inputmode="ascii" oninput="onIdInput('f','facility')">
+    <div class="id-msg" id="f-id-msg"></div>
+  </div>
+  <div class="form-group">
+    <div class="form-label"><span class="req">*</span> 位置情報</div>
+    <div class="gps-row">
+      <div class="coord-display" id="f-coord"><div>座標未取得</div><div class="coord-sub">GPSボタンを押してください</div></div>
+      <button class="btn-gps" id="f-gps-btn" onclick="getGPS('f')">📡 GPS取得</button>
+    </div>
+  </div>
+
+  <div class="map-section" id="f-map-section">
+    <div class="map-placeholder" id="f-map-ph">
+      <div class="map-ph-ic">🗺</div>
+      GPS取得後に地図が表示されます
+    </div>
+    <div id="fac-map"></div>
+    <div class="dist-overlay" id="f-dist-ov">
+      <div class="dist-row"><div class="dist-dot" style="background:#0e3a90"></div>通知圏 <span id="f-ov-trigger">50</span>m</div>
+      <div class="dist-row" style="border-top:1px solid #ddd;margin-top:4px;padding-top:4px;"><div class="dist-dot" style="background:#444"></div>現在距離 <span class="dist-val" id="f-dist-now">—</span>m</div>
+    </div>
+    <div class="map-hint">📌 マーカーをドラッグして調整</div>
+  </div>
+
+  <div class="range-group">
+    <div class="range-box trigger-box">
+      <div class="range-lbl trigger-lbl">🔔 通知トリガー距離</div>
+      <div class="range-controls">
+        <button class="range-btn" ontouchstart="startRepeat('f','trigger',-5)" onmousedown="startRepeat('f','trigger',-5)" ontouchend="stopRepeat()" onmouseup="stopRepeat()">−</button>
+        <input type="number" class="range-val" id="f-trigger" value="50" min="5" max="500" oninput="updateCircles('f')">
+        <button class="range-btn" ontouchstart="startRepeat('f','trigger',5)" onmousedown="startRepeat('f','trigger',5)" ontouchend="stopRepeat()" onmouseup="stopRepeat()">＋</button>
+      </div>
+      <div class="range-unit">m — この距離以内でアナウンス</div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <div class="form-label">アナウンステキスト <code>announce_text</code> <span class="opt">任意</span></div>
+    <input type="text" class="field-in" id="f-announce" placeholder="例: 近くにトイレがあります">
+  </div>
+  <div class="form-group">
+    <div class="form-label">有効開始日 <code>start_date</code> <span class="opt">任意</span></div>
+    <input type="date" class="field-in" id="f-start">
+  </div>
+  <div class="form-group">
+    <div class="form-label">有効終了日 <code>end_date</code> <span class="opt">任意</span></div>
+    <input type="date" class="field-in" id="f-end">
+  </div>
+
+  <div class="photo-section">
+    <div class="form-label" style="padding-bottom:6px;">📷 写真 <span class="opt">任意</span></div>
+    <div class="photo-preview-wrap" id="f-prev-wrap"><img id="f-prev-img" src="" alt=""></div>
+    <div class="photo-name-row" id="f-name-row">
+      <input type="text" class="photo-name-in" id="f-filename" placeholder="ファイル名（拡張子なし）">
+      <button class="btn-dl" onclick="downloadPhoto('f')">⬇ 保存</button>
+    </div>
+    <label class="btn-camera-label" for="f-photo-in">📷 タップして撮影・選択</label>
+    <input type="file" id="f-photo-in" accept="image/*" capture="environment" style="display:none" onchange="onPhoto('f',this)">
+  </div>
+
+  <button class="btn-submit" onclick="submitFacility()">✅ 施設を登録</button>
+  <div class="form-end"></div>
+</div>
+
+<!-- HISTORY -->
+<div class="screen" id="screen-hist">
+  <div class="sec-hdr" style="margin-bottom:10px;">登録済みデータ</div>
+  <div id="hist-list"></div>
+</div>
+
+<!-- SETTINGS -->
+<div class="screen" id="screen-sett">
+  <div class="sec-hdr">GAS 書き込み設定</div>
+  <div class="sett-group">
+    <div class="sett-lbl">Google Apps Script URL</div>
+    <textarea class="field-in" id="gas-url-in" style="font-family:var(--mono);font-size:11px;min-height:64px;resize:none;" placeholder="https://script.google.com/macros/s/…/exec"></textarea>
+    <div class="sett-row">
+      <button class="btn-act primary" onclick="saveGasUrl()">💾 保存</button>
+      <button class="btn-act green" onclick="testGas()">🔌 接続テスト</button>
+    </div>
+    <div class="status-msg" id="gas-status"></div>
+  </div>
+  <div class="sec-hdr">スプレッドシート同期（ID重複チェック用）</div>
+  <div class="sett-group">
+    <div class="sett-lbl">スプレッドシート URL / ID</div>
+    <input type="text" class="field-in" id="sheet-id-in" style="font-family:var(--mono);font-size:11px;" placeholder="URLまたはスプレッドシートID">
+    <div class="sett-row">
+      <button class="btn-act primary" onclick="saveSheetId()">💾 保存</button>
+      <button class="btn-act green" onclick="syncFromSheet()">🔄 シートから同期</button>
+    </div>
+    <div class="status-msg" id="sync-status"></div>
+  </div>
+  <div class="sec-hdr">データ管理</div>
+  <div class="sett-group">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.8;">このアプリのローカルデータのみ削除されます。<br>スプレッドシートには影響しません。</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-act danger" onclick="clearData('spots')">スポット削除</button>
+      <button class="btn-act danger" onclick="clearData('facilities')">施設削除</button>
+      <button class="btn-act danger" onclick="clearData('all')">全削除</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ─── KANA→ROMAJI ───
+const KANA_MAP = (()=>{
+  const base = {
+    'ア':'a','イ':'i','ウ':'u','エ':'e','オ':'o',
+    'カ':'ka','キ':'ki','ク':'ku','ケ':'ke','コ':'ko',
+    'サ':'sa','シ':'shi','ス':'su','セ':'se','ソ':'so',
+    'タ':'ta','チ':'chi','ツ':'tsu','テ':'te','ト':'to',
+    'ナ':'na','ニ':'ni','ヌ':'nu','ネ':'ne','ノ':'no',
+    'ハ':'ha','ヒ':'hi','フ':'fu','ヘ':'he','ホ':'ho',
+    'マ':'ma','ミ':'mi','ム':'mu','メ':'me','モ':'mo',
+    'ヤ':'ya','ユ':'yu','ヨ':'yo',
+    'ラ':'ra','リ':'ri','ル':'ru','レ':'re','ロ':'ro',
+    'ワ':'wa','ヲ':'o','ン':'n',
+    'ガ':'ga','ギ':'gi','グ':'gu','ゲ':'ge','ゴ':'go',
+    'ザ':'za','ジ':'ji','ズ':'zu','ゼ':'ze','ゾ':'zo',
+    'ダ':'da','ヂ':'ji','ヅ':'zu','デ':'de','ド':'do',
+    'バ':'ba','ビ':'bi','ブ':'bu','ベ':'be','ボ':'bo',
+    'パ':'pa','ピ':'pi','プ':'pu','ペ':'pe','ポ':'po',
+    'キャ':'kya','キュ':'kyu','キョ':'kyo',
+    'シャ':'sha','シュ':'shu','ショ':'sho',
+    'チャ':'cha','チュ':'chu','チョ':'cho',
+    'ニャ':'nya','ニュ':'nyu','ニョ':'nyo',
+    'ヒャ':'hya','ヒョ':'hyo',
+    'ミャ':'mya','ミョ':'myo',
+    'リャ':'rya','リュ':'ryu','リョ':'ryo',
+    'ギャ':'gya','ギョ':'gyo',
+    'ジャ':'ja','ジュ':'ju','ジョ':'jo',
+    'ビャ':'bya','ビョ':'byo',
+    'ピャ':'pya','ピョ':'pyo',
+    'ァ':'a','ィ':'i','ゥ':'u','ェ':'e','ォ':'o',
+    'ッ':'x','ー':'-',
+  };
+  const m={};
+  Object.entries(base).forEach(([k,v])=>{
+    m[k]=v;
+    const h=k.replace(/[\u30A1-\u30F6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+    if(h!==k) m[h]=v;
+  });
+  return m;
+})();
+
+function toRomaji(str){
+  let s=str.replace(/[\u3041-\u3096]/g,c=>String.fromCharCode(c.charCodeAt(0)+0x60));
+  let out='';
+  for(let i=0;i<s.length;){
+    if(s[i]==='ッ'){
+      const n2=KANA_MAP[s.slice(i+1,i+3)],n1=KANA_MAP[s[i+1]];
+      const nxt=n2||n1||'';
+      if(nxt&&!'aiueo'.includes(nxt[0])) out+=nxt[0];
+      i++;continue;
+    }
+    const t=KANA_MAP[s.slice(i,i+2)];
+    if(t!==undefined){out+=t;i+=2;continue;}
+    const o=KANA_MAP[s[i]];
+    if(o!==undefined){out+=o;i++;continue;}
+    if(/[ 　]/.test(s[i])){out+='_';i++;continue;}
+    if(/[a-zA-Z0-9_-]/.test(s[i])){out+=s[i].toLowerCase();i++;continue;}
+    i++;
+  }
+  return out.replace(/_+/g,'_').replace(/^_|_$/g,'').replace(/-+/g,'-').toLowerCase().slice(0,40);
+}
+
+// ─── STATE ───
+const S={
+  gasUrl:'', sheetId:'',
+  spots:[], facilities:[],
+  photoBlobs:{},
+};
+const maps={}, markers={}, circles={}, uMarkers={};
+let watchId=null;
+let userLat=null, userLng=null;
+let repeatTimer=null;
+
+// ─── INIT ───
+function init(){
+  S.gasUrl=ls('gasUrl')||'';
+  S.sheetId=ls('sheetId')||'';
+  S.spots=lsj('spots')||[];
+  S.facilities=lsj('facilities')||[];
+  if(document.getElementById('gas-url-in')) document.getElementById('gas-url-in').value=S.gasUrl;
+  if(document.getElementById('sheet-id-in')) document.getElementById('sheet-id-in').value=S.sheetId;
+  updateBadge();
+  startWatch();
+}
+
+// ─── GPS WATCH ───
+function startWatch(){
+  if(!navigator.geolocation) return;
+  const pill=document.getElementById('gps-pill'),txt=document.getElementById('gps-txt');
+  pill.className='gps-pill searching'; txt.textContent='取得中…';
+  watchId=navigator.geolocation.watchPosition(pos=>{
+    userLat=pos.coords.latitude; userLng=pos.coords.longitude;
+    const acc=Math.round(pos.coords.accuracy);
+    pill.className='gps-pill active'; txt.textContent='±'+acc+'m';
+    ['s','f'].forEach(p=>{ updateUMarker(p); updateDist(p); });
+  },()=>{ pill.className='gps-pill'; txt.textContent='GPS失敗'; },{enableHighAccuracy:true,maximumAge:3000});
+}
+
+function getGPS(p){
+  if(!navigator.geolocation){toast('GPS未対応','err');return;}
+  const btn=document.getElementById(p+'-gps-btn');
+  btn.classList.add('loading'); btn.textContent='📡 取得中…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=pos.coords.latitude, lng=pos.coords.longitude, acc=Math.round(pos.coords.accuracy);
+    setCoords(p,lat,lng,acc);
+    btn.classList.remove('loading'); btn.textContent='📡 GPS取得';
+    toast('取得 ±'+acc+'m','ok');
+  },err=>{
+    btn.classList.remove('loading'); btn.textContent='📡 GPS取得';
+    toast(err.code===1?'位置情報の許可が必要です':'GPS取得失敗','err');
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+
+function setCoords(p,lat,lng,acc){
+  const c=document.getElementById(p+'-coord');
+  c.className='coord-display has';
+  c.innerHTML='<div>'+lat.toFixed(6)+', '+lng.toFixed(6)+'</div><div class="coord-sub">精度: ±'+acc+'m</div>';
+  initMap(p,lat,lng);
+  const fn=document.getElementById(p+'-filename');
+  const id=document.getElementById(p+'-id');
+  if(fn&&id.value&&!fn.value) fn.value=id.value;
+}
+
+// ─── MAP ───
+function mkSpotIcon(p){
+  const color=p==='s'?'#b05000':'#0e3a90';
+  return L.divIcon({html:'<div style="background:'+color+';width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',iconSize:[16,16],iconAnchor:[8,8],className:''});
+}
+function mkUserIcon(){
+  return L.divIcon({html:'<div style="background:#2050e0;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #2050e0"></div>',iconSize:[14,14],iconAnchor:[7,7],className:''});
+}
+
+function initMap(p,lat,lng){
+  const mapId=p==='s'?'spot-map':'fac-map';
+  document.getElementById(p+'-map-ph').style.display='none';
+  document.getElementById(mapId).style.display='block';
+
+  if(maps[p]){
+    markers[p].setLatLng([lat,lng]);
+    Object.values(circles[p]).forEach(c=>c.setLatLng([lat,lng]));
+    maps[p].setView([lat,lng],18);
+    updateDist(p); return;
+  }
+
+  const m=L.map(mapId,{zoomControl:true,attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m);
+  maps[p]=m;
+
+  const mk=L.marker([lat,lng],{draggable:true,icon:mkSpotIcon(p)}).addTo(m);
+  markers[p]=mk;
+  mk.on('drag',()=>{ updateDist(p); updateCirclePos(p); });
+  mk.on('dragend',()=>{
+    const pos=mk.getLatLng();
+    const c=document.getElementById(p+'-coord');
+    c.className='coord-display has';
+    c.innerHTML='<div>'+pos.lat.toFixed(6)+', '+pos.lng.toFixed(6)+'</div><div class="coord-sub">📌 ドラッグで微調整</div>';
+    updateDist(p);
+  });
+
+  if(p==='s'){
+    const approach=parseInt(document.getElementById('s-approach').value)||30;
+    const arrive=parseInt(document.getElementById('s-arrive').value)||15;
+    circles[p]={
+      approach:L.circle([lat,lng],{radius:approach,color:'#b05000',weight:2,dashArray:'7,5',fillOpacity:.07,fillColor:'#b05000'}).addTo(m),
+      arrive:L.circle([lat,lng],{radius:arrive,color:'#1a6828',weight:2.5,fillOpacity:.13,fillColor:'#2a8838'}).addTo(m),
+    };
+  } else {
+    const trigger=parseInt(document.getElementById('f-trigger').value)||50;
+    circles[p]={trigger:L.circle([lat,lng],{radius:trigger,color:'#0e3a90',weight:2,dashArray:'7,5',fillOpacity:.08,fillColor:'#0e3a90'}).addTo(m)};
+  }
+
+  if(userLat){
+    uMarkers[p]=L.marker([userLat,userLng],{icon:mkUserIcon(),interactive:false}).addTo(m);
+  }
+
+  m.setView([lat,lng],18);
+  document.getElementById(p+'-dist-ov').classList.add('show');
+  updateDist(p);
+}
+
+function updateCirclePos(p){
+  if(!markers[p]||!circles[p]) return;
+  const ll=markers[p].getLatLng();
+  Object.values(circles[p]).forEach(c=>c.setLatLng(ll));
+}
+
+function updateCircles(p){
+  if(!circles[p]) return;
+  if(p==='s'){
+    const a=Math.max(5,parseInt(document.getElementById('s-approach').value)||30);
+    const r=Math.max(3,parseInt(document.getElementById('s-arrive').value)||15);
+    circles[p].approach.setRadius(a);
+    circles[p].arrive.setRadius(r);
+    document.getElementById('s-ov-approach').textContent=a;
+    document.getElementById('s-ov-arrive').textContent=r;
+  } else {
+    const t=Math.max(5,parseInt(document.getElementById('f-trigger').value)||50);
+    circles[p].trigger.setRadius(t);
+    document.getElementById('f-ov-trigger').textContent=t;
+  }
+  updateDist(p);
+}
+
+function updateUMarker(p){
+  if(!maps[p]||!userLat) return;
+  if(uMarkers[p]) uMarkers[p].setLatLng([userLat,userLng]);
+  else{ uMarkers[p]=L.marker([userLat,userLng],{icon:mkUserIcon(),interactive:false}).addTo(maps[p]); }
+}
+
+function updateDist(p){
+  if(!userLat||!markers[p]) return;
+  const sp=markers[p].getLatLng();
+  const d=Math.round(haversine(userLat,userLng,sp.lat,sp.lng));
+  const el=document.getElementById(p+'-dist-now');
+  if(!el) return;
+  el.textContent=d;
+  if(p==='s'){
+    const a=parseInt(document.getElementById('s-arrive').value)||15;
+    const ap=parseInt(document.getElementById('s-approach').value)||30;
+    el.className='dist-val '+(d<=a?'arrive':d<=ap?'approach':'outside');
+  } else {
+    const t=parseInt(document.getElementById('f-trigger').value)||50;
+    el.className='dist-val '+(d<=t?'arrive':'outside');
+  }
+}
+
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371000,r=Math.PI/180,dL=(lat2-lat1)*r,dG=(lng2-lng1)*r;
+  const a=Math.sin(dL/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dG/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// ─── REPEAT BUTTONS ───
+function startRepeat(p,field,delta){
+  doRange(p,field,delta);
+  repeatTimer=setInterval(()=>doRange(p,field,delta),150);
+}
+function stopRepeat(){ clearInterval(repeatTimer); repeatTimer=null; }
+function doRange(p,field,delta){
+  const id=p+'-'+(field==='trigger'?'trigger':field);
+  const inp=document.getElementById(id);
+  const min=parseInt(inp.min)||3, max=parseInt(inp.max)||500;
+  inp.value=Math.min(max,Math.max(min,(parseInt(inp.value)||0)+delta));
+  updateCircles(p);
+}
+
+// ─── NAME → ROMAJI ───
+function onNameInput(p,val){
+  const idIn=document.getElementById(p+'-id');
+  if(!idIn.dataset.manual){
+    const r=toRomaji(val);
+    idIn.value=r;
+    checkId(p,p==='s'?'spot':'facility');
+    const fn=document.getElementById(p+'-filename');
+    if(fn&&r) fn.value=r;
+  }
+}
+function onIdInput(p,type){
+  document.getElementById(p+'-id').dataset.manual='1';
+  checkId(p,type);
+}
+function checkId(p,type){
+  const inp=document.getElementById(p+'-id');
+  const msg=document.getElementById(p+'-id-msg');
+  const val=inp.value.trim();
+  if(!val){inp.className='field-in mono';msg.className='id-msg';return;}
+  if(!/^[a-zA-Z0-9_-]+$/.test(val)){
+    inp.className='field-in mono err';
+    msg.className='id-msg dup';
+    msg.textContent='⚠ 半角英数字 _ - のみ使用可';
+    return;
+  }
+  const existing=(type==='spot'?S.spots:S.facilities).map(r=>type==='spot'?r.spot_id:r.facility_id);
+  if(existing.includes(val)){
+    inp.className='field-in mono err';
+    msg.className='id-msg dup';
+    msg.textContent='⚠ このIDはすでに登録済みです';
+  } else {
+    inp.className='field-in mono ok';
+    msg.className='id-msg ok';
+    msg.textContent='✓ 使用可能';
+  }
+}
+
+// ─── PHOTO ───
+function onPhoto(p,input){
+  const file=input.files[0]; if(!file) return;
+  S.photoBlobs[p]=file;
+  const url=URL.createObjectURL(file);
+  document.getElementById(p+'-prev-img').src=url;
+  document.getElementById(p+'-prev-wrap').style.display='block';
+  document.getElementById(p+'-name-row').style.display='flex';
+  const fn=document.getElementById(p+'-filename');
+  if(!fn.value){const id=document.getElementById(p+'-id').value.trim();if(id)fn.value=id;}
+}
+function downloadPhoto(p){
+  const blob=S.photoBlobs[p]; if(!blob){toast('写真がありません','err');return;}
+  const fn=document.getElementById(p+'-filename');
+  const ext=blob.type.includes('png')?'png':'jpg';
+  const name=(fn.value.trim()||'photo')+'.'+ext;
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click();
+  URL.revokeObjectURL(url);
+  toast('「'+name+'」を保存','ok');
+}
+
+// ─── SUBMIT ───
+async function submitSpot(){
+  const id=document.getElementById('s-id').value.trim();
+  const name=document.getElementById('s-name').value.trim();
+  if(!id||!name){toast('名前とIDを入力してください','err');return;}
+  if(!/^[a-zA-Z0-9_-]+$/.test(id)){toast('IDの形式が不正です','err');return;}
+  if(S.spots.some(r=>r.spot_id===id)){toast('このIDはすでに登録済みです','err');return;}
+  if(!markers['s']){toast('位置情報を取得してください','err');return;}
+  const pos=markers['s'].getLatLng();
+  const fn=document.getElementById('s-filename').value.trim();
+  const row={
+    spot_id:id, spot_name:name,
+    lat:pos.lat.toFixed(6), lng:pos.lng.toFixed(6),
+    approach_dist:document.getElementById('s-approach').value||'30',
+    arrive_dist:document.getElementById('s-arrive').value||'15',
+    audio_start_url:'', audio_approach_url:'', audio_arrive_url:'',
+    audio_next_url:'', audio_goal_url:'',
+    description:'', keywords:'',
+    photo_url:fn?fn+'.jpg':'',
+  };
+  S.spots.push(row); lsj('spots',S.spots);
+  await writeGas('spots',S.spots);
+  updateBadge();
+  toast('✅ スポット「'+name+'」を登録','ok');
+  resetForm('s');
+  showTab('hist');
+}
+
+async function submitFacility(){
+  const id=document.getElementById('f-id').value.trim();
+  const name=document.getElementById('f-name').value.trim();
+  if(!id||!name){toast('名前とIDを入力してください','err');return;}
+  if(!/^[a-zA-Z0-9_-]+$/.test(id)){toast('IDの形式が不正です','err');return;}
+  if(S.facilities.some(r=>r.facility_id===id)){toast('このIDはすでに登録済みです','err');return;}
+  if(!markers['f']){toast('位置情報を取得してください','err');return;}
+  const pos=markers['f'].getLatLng();
+  const fn=document.getElementById('f-filename').value.trim();
+  const row={
+    facility_id:id, facility_name:name,
+    lat:pos.lat.toFixed(6), lng:pos.lng.toFixed(6),
+    trigger_dist:document.getElementById('f-trigger').value||'50',
+    announce_text:document.getElementById('f-announce').value.trim(),
+    audio_url:'',
+    start_date:document.getElementById('f-start').value,
+    end_date:document.getElementById('f-end').value,
+    photo_url:fn?fn+'.jpg':'',
+  };
+  S.facilities.push(row); lsj('facilities',S.facilities);
+  await writeGas('facilities',S.facilities);
+  updateBadge();
+  toast('✅ 施設「'+name+'」を登録','ok');
+  resetForm('f');
+  showTab('hist');
+}
+
+function resetForm(p){
+  ['id','name','filename'].forEach(f=>{
+    const el=document.getElementById(p+'-'+f);
+    if(el){el.value='';delete el.dataset.manual;}
+  });
+  document.getElementById(p+'-id').className='field-in mono';
+  document.getElementById(p+'-id-msg').className='id-msg';
+  document.getElementById(p+'-prev-wrap').style.display='none';
+  document.getElementById(p+'-name-row').style.display='none';
+  const c=document.getElementById(p+'-coord');
+  c.className='coord-display'; c.innerHTML='<div>座標未取得</div><div class="coord-sub">GPSボタンを押してください</div>';
+  delete S.photoBlobs[p];
+  if(p==='s'){document.getElementById('s-approach').value='30';document.getElementById('s-arrive').value='15';}
+  else{document.getElementById('f-trigger').value='50';['announce','start','end'].forEach(f=>{const e=document.getElementById('f-'+f);if(e)e.value='';});}
+  if(maps[p]){maps[p].remove();delete maps[p];delete markers[p];delete circles[p];delete uMarkers[p];
+    const mid=p==='s'?'spot-map':'fac-map';
+    document.getElementById(mid).style.display='none';
+    document.getElementById(mid).innerHTML='';
+    document.getElementById(p+'-map-ph').style.display='flex';
+    document.getElementById(p+'-dist-ov').classList.remove('show');
+  }
+}
+
+// ─── GAS ───
+async function writeGas(sheet,rows){
+  if(!S.gasUrl) return;
+  try{ await fetch(S.gasUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'write',sheet,rows})}); }
+  catch(e){ console.warn(e); }
+}
+
+// ─── HISTORY ───
+function renderHist(){
+  const list=document.getElementById('hist-list');
+  const all=[
+    ...S.spots.map(r=>({type:'spot',id:r.spot_id,name:r.spot_name,lat:r.lat,lng:r.lng,meta:'到着'+r.arrive_dist+'m / 接近'+r.approach_dist+'m'})),
+    ...S.facilities.map(r=>({type:'fac',id:r.facility_id,name:r.facility_name,lat:r.lat,lng:r.lng,meta:'通知'+r.trigger_dist+'m'}))
+  ];
+  if(!all.length){list.innerHTML='<div class="hist-empty"><span class="hist-empty-ic">📭</span>まだ登録がありません</div>';return;}
+  list.innerHTML=all.map(it=>`
+    <div class="hist-item">
+      <div class="hist-badge ${it.type}">${it.type==='spot'?'スポット':'施設'}</div>
+      <div class="hist-info">
+        <div class="hist-id">${esc(it.id)}</div>
+        <div class="hist-name">${esc(it.name)}</div>
+        <div class="hist-meta">${esc(it.lat)}, ${esc(it.lng)} — ${esc(it.meta)}</div>
+      </div>
+      <button class="hist-del" onclick="delItem('${it.type}','${esc(it.id)}')">✕</button>
+    </div>`).join('');
+}
+
+function delItem(type,id){
+  if(!confirm('「'+id+'」を削除しますか？')) return;
+  if(type==='spot'){S.spots=S.spots.filter(r=>r.spot_id!==id);lsj('spots',S.spots);writeGas('spots',S.spots);}
+  else{S.facilities=S.facilities.filter(r=>r.facility_id!==id);lsj('facilities',S.facilities);writeGas('facilities',S.facilities);}
+  updateBadge(); renderHist(); toast('削除しました');
+}
+
+function updateBadge(){
+  const n=S.spots.length+S.facilities.length;
+  const b=document.getElementById('hist-badge');
+  b.textContent=n; b.classList.toggle('show',n>0);
+}
+
+// ─── SETTINGS ───
+function saveGasUrl(){S.gasUrl=document.getElementById('gas-url-in').value.trim();ls('gasUrl',S.gasUrl);setSt('gas-status',S.gasUrl?'✓ 保存しました':'URLが空です',S.gasUrl?'ok':'err');}
+function saveSheetId(){const raw=document.getElementById('sheet-id-in').value.trim();const m=raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);S.sheetId=m?m[1]:raw;ls('sheetId',S.sheetId);setSt('sync-status','✓ 保存しました','ok');}
+function testGas(){
+  const url=document.getElementById('gas-url-in').value.trim();
+  if(!url){setSt('gas-status','URLを入力してください','err');return;}
+  setSt('gas-status','接続テスト中…','info');
+  const cb='_gping_'+Date.now(); let sc;
+  window[cb]=data=>{delete window[cb];if(sc.parentNode)sc.parentNode.removeChild(sc);setSt('gas-status',data&&data.ok?'✅ 接続成功 v'+(data.version||'?'):'❌ 接続失敗',data&&data.ok?'ok':'err');};
+  sc=document.createElement('script'); sc.src=url+'?action=ping&callback='+cb;
+  sc.onerror=()=>setSt('gas-status','❌ ネットワークエラー','err');
+  document.head.appendChild(sc);
+  setTimeout(()=>{if(window[cb]){delete window[cb];setSt('gas-status','❌ タイムアウト','err');}},10000);
+}
+async function syncFromSheet(){
+  if(!S.sheetId){setSt('sync-status','シートIDを設定してください','err');return;}
+  setSt('sync-status','同期中…','info');
+  try{
+    const [sc,fc]=await Promise.all([fetchGviz(S.sheetId,'spots'),fetchGviz(S.sheetId,'facilities')]);
+    const ss=parseCsv(sc), fs=parseCsv(fc);
+    const sids=new Set(ss.map(r=>r.spot_id)), fids=new Set(fs.map(r=>r.facility_id));
+    S.spots=[...ss,...S.spots.filter(r=>!sids.has(r.spot_id))];
+    S.facilities=[...fs,...S.facilities.filter(r=>!fids.has(r.facility_id))];
+    lsj('spots',S.spots); lsj('facilities',S.facilities);
+    updateBadge();
+    setSt('sync-status','✅ 同期完了 スポット:'+S.spots.length+' / 施設:'+S.facilities.length,'ok');
+    toast('同期完了','ok');
+  }catch(e){setSt('sync-status','❌ '+e.message,'err');}
+}
+function clearData(type){
+  if(!confirm('削除しますか？')) return;
+  if(type==='all'||type==='spots'){S.spots=[];lsj('spots',[]);}
+  if(type==='all'||type==='facilities'){S.facilities=[];lsj('facilities',[]);}
+  updateBadge(); toast('削除しました');
+}
+
+// ─── UTILS ───
+function showTab(tab){
+  ['spot','fac','hist','sett'].forEach(t=>{
+    document.getElementById('screen-'+t).classList.toggle('active',t===tab);
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  });
+  document.querySelector('.content').scrollTop=0;
+  if(tab==='hist') renderHist();
+  setTimeout(()=>{if(maps[tab]) maps[tab].invalidateSize();},60);
+}
+async function fetchGviz(sid,sheet){
+  const r=await fetch('https://docs.google.com/spreadsheets/d/'+sid+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(sheet));
+  if(!r.ok) throw new Error('シート取得失敗: '+sheet);
+  return (await r.text()).replace(/^\uFEFF/,'');
+}
+function parseCsv(text){
+  const rows=[],lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  if(lines.length<2) return rows;
+  const hds=splitC(lines[0]);
+  for(let i=1;i<lines.length;i++){const ln=lines[i];if(!ln.trim())continue;const v=splitC(ln),o={};hds.forEach((h,x)=>{o[h.trim()]=(v[x]||'').trim();});rows.push(o);}
+  return rows;
+}
+function splitC(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(ch==='"'){if(q&&l[i+1]==='"'){c+='"';i++;}else q=!q;}else if(ch===','&&!q){r.push(c);c='';}else c+=ch;}r.push(c);return r;}
+function ls(k,v){if(v!==undefined){try{localStorage.setItem('survey_'+k,v);}catch(e){}return;}try{return localStorage.getItem('survey_'+k);}catch(e){return null;}}
+function lsj(k,v){if(v!==undefined){ls(k,JSON.stringify(v));return;}try{const s=ls(k);return s?JSON.parse(s):null;}catch(e){return null;}}
+function setSt(id,msg,cls){const e=document.getElementById(id);e.className='status-msg show '+cls;e.textContent=msg;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+let toastT;
+function toast(msg,type=''){const e=document.getElementById('toast');e.textContent=msg;e.className='toast show'+(type?' '+type:'');clearTimeout(toastT);toastT=setTimeout(()=>{e.className='toast';},3000);}
+init();
+<\/script>
+</body>
+</html>
