@@ -131,6 +131,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);max-width:48
 .h-name{font-size:15px;font-weight:700;margin-top:2px;}
 .h-del{background:none;border:2px solid var(--border);border-radius:6px;color:var(--dim);font-size:15px;cursor:pointer;padding:6px 10px;flex-shrink:0;}
 .h-del:active{border-color:var(--red-bd);color:var(--red);background:var(--red-bg);}
+.h-edit{background:var(--blue-bg);border-color:var(--blue-bd);color:var(--blue);margin-right:4px;}
+.h-edit:active{border-color:var(--blue-bd);color:#fff;background:var(--blue);}
+
 .h-empty{text-align:center;padding:60px 32px;color:var(--dim);font-size:14px;line-height:2.4;}
 .h-empty-ic{font-size:48px;display:block;margin-bottom:8px;opacity:.25;}
 
@@ -471,7 +474,7 @@ function toRomaji(str){
 // =========================================================
 // STATE
 // =========================================================
-const S={gasUrl:'',sheetId:'',spots:[],facilities:[],blobs:{}};
+const S={gasUrl:'',sheetId:'',spots:[],facilities:[],blobs:{},edit:null};
 const MP={},MK={},MC={},MU={};   // maps, markers, circles, user-markers
 let uLat=null,uLng=null,rTimer=null;
 
@@ -674,13 +677,16 @@ function checkId(p,type){
     inp.className='field-in mono err'; msg.className='id-msg dup';
     msg.textContent='⚠ 半角英数字 _ - のみ使用可'; return;
   }
-  const ids=(type==='spot'?S.spots:S.facilities).map(r=>type==='spot'?r.spot_id:r.facility_id);
-  if(ids.includes(val)){
+  const arr=type==='spot'?S.spots:S.facilities;
+  const key=type==='spot'?'spot_id':'facility_id';
+  const editing=S.edit&&S.edit.type===type;
+  const dup=arr.some(r=>r[key]===val&&(!editing||r[key]!==S.edit.id));
+  if(dup){
     inp.className='field-in mono err'; msg.className='id-msg dup';
     msg.textContent='⚠ このIDはすでに登録済みです';
   } else {
     inp.className='field-in mono ok'; msg.className='id-msg ok';
-    msg.textContent='✓ 使用可能';
+    msg.textContent=editing?'✓ 更新できます':'✓ 使用可能';
   }
 }
 
@@ -713,9 +719,10 @@ function dlPhoto(p){
 async function submitSpot(){
   const id=document.getElementById('s-id').value.trim();
   const name=document.getElementById('s-name').value.trim();
+  const editing=S.edit&&S.edit.type==='spot';
   if(!id||!name){toast('名前とIDを入力してください','err');return;}
   if(!/^[a-zA-Z0-9_-]+$/.test(id)){toast('IDの形式が不正です','err');return;}
-  if(S.spots.some(r=>r.spot_id===id)){toast('このIDはすでに登録済みです','err');return;}
+  if(S.spots.some(r=>r.spot_id===id&&(!editing||r.spot_id!==S.edit.id))){toast('このIDはすでに登録済みです','err');return;}
   if(!MK['s']){toast('位置情報を取得してください','err');return;}
   const pos=MK['s'].getLatLng();
   const fn=document.getElementById('s-fname').value.trim();
@@ -729,19 +736,28 @@ async function submitSpot(){
     description:'', keywords:'',
     photo_url:fn?fn+'.jpg':'',
   };
-  S.spots.push(row); lsj('spots',S.spots);
+  if(editing){
+    const idx=S.spots.findIndex(r=>r.spot_id===S.edit.id);
+    if(idx>=0) S.spots[idx]=row;
+    else S.spots.push(row);
+    S.edit=null;
+  }else{
+    S.spots.push(row);
+  }
+  lsj('spots',S.spots);
   await gasWrite('spots',S.spots);
   updBadge();
-  toast('✅ スポット「'+name+'」を登録','ok');
+  toast((editing?'✅ スポット「':'✅ スポット「')+name+'」を'+(editing?'更新':'登録'),'ok');
   resetForm('s'); showTab('hist');
 }
 
 async function submitFac(){
   const id=document.getElementById('f-id').value.trim();
   const name=document.getElementById('f-name').value.trim();
+  const editing=S.edit&&S.edit.type==='facility';
   if(!id||!name){toast('名前とIDを入力してください','err');return;}
   if(!/^[a-zA-Z0-9_-]+$/.test(id)){toast('IDの形式が不正です','err');return;}
-  if(S.facilities.some(r=>r.facility_id===id)){toast('このIDはすでに登録済みです','err');return;}
+  if(S.facilities.some(r=>r.facility_id===id&&(!editing||r.facility_id!==S.edit.id))){toast('このIDはすでに登録済みです','err');return;}
   if(!MK['f']){toast('位置情報を取得してください','err');return;}
   const pos=MK['f'].getLatLng();
   const fn=document.getElementById('f-fname').value.trim();
@@ -755,14 +771,25 @@ async function submitFac(){
     end_date:document.getElementById('f-end').value,
     photo_url:fn?fn+'.jpg':'',
   };
-  S.facilities.push(row); lsj('facilities',S.facilities);
+  if(editing){
+    const idx=S.facilities.findIndex(r=>r.facility_id===S.edit.id);
+    if(idx>=0) S.facilities[idx]=row;
+    else S.facilities.push(row);
+    S.edit=null;
+  }else{
+    S.facilities.push(row);
+  }
+  lsj('facilities',S.facilities);
   await gasWrite('facilities',S.facilities);
   updBadge();
-  toast('✅ 施設「'+name+'」を登録','ok');
+  toast((editing?'✅ 施設「':'✅ 施設「')+name+'」を'+(editing?'更新':'登録'),'ok');
   resetForm('f'); showTab('hist');
 }
 
 function resetForm(p){
+  if(S.edit&&((p==='s'&&S.edit.type==='spot')||(p==='f'&&S.edit.type==='facility'))) S.edit=null;
+  const btn=document.querySelector(p==='s'?'#screen-spot .btn-submit':'#screen-fac .btn-submit');
+  if(btn) btn.textContent=p==='s'?'➕ スポットを登録':'➕ 施設を登録';
   ['id','name','fname'].forEach(f=>{
     const el=document.getElementById(p+'-'+f);
     if(el){el.value='';delete el.dataset.manual;}
@@ -809,7 +836,7 @@ function renderHist(){
   const list=document.getElementById('hist-list');
   const all=[
     ...S.spots.map(r=>({type:'spot',id:r.spot_id,name:r.spot_name,lat:r.lat,lng:r.lng,meta:'到着'+r.arrive_dist+'m / 接近'+r.approach_dist+'m'})),
-    ...S.facilities.map(r=>({type:'fac',id:r.facility_id,name:r.facility_name,lat:r.lat,lng:r.lng,meta:'通知'+r.trigger_dist+'m'}))
+    ...S.facilities.map(r=>({type:'facility',id:r.facility_id,name:r.facility_name,lat:r.lat,lng:r.lng,meta:'通知'+r.trigger_dist+'m'}))
   ];
   if(!all.length){
     list.innerHTML='<div class="h-empty"><span class="h-empty-ic">📭</span>まだ登録がありません</div>';
@@ -817,20 +844,71 @@ function renderHist(){
   }
   list.innerHTML=all.map(it=>`
     <div class="hist-item">
-      <div class="h-badge ${it.type}">${it.type==='spot'?'スポット':'施設'}</div>
+      <div class="h-badge ${it.type==='spot'?'spot':'fac'}">${it.type==='spot'?'スポット':'施設'}</div>
       <div class="h-info">
         <div class="h-id">${esc(it.id)}</div>
         <div class="h-name">${esc(it.name)}</div>
         <div class="h-meta">${esc(it.lat)}, ${esc(it.lng)} — ${esc(it.meta)}</div>
       </div>
+      <button class="h-del h-edit" onclick="editItem('${it.type}','${esc(it.id)}')">編集</button>
       <button class="h-del" onclick="delItem('${it.type}','${esc(it.id)}')">✕</button>
     </div>`).join('');
+}
+
+function editItem(type,id){
+  const isSpot=type==='spot';
+  const arr=isSpot?S.spots:S.facilities;
+  const key=isSpot?'spot_id':'facility_id';
+  const row=arr.find(r=>r[key]===id);
+  if(!row){toast('データが見つかりません','err');return;}
+
+  S.edit={type:type,id:id};
+
+  if(isSpot){
+    document.getElementById('s-name').value=row.spot_name||'';
+    document.getElementById('s-id').value=row.spot_id||'';
+    document.getElementById('s-id').dataset.manual='1';
+    document.getElementById('s-ap').value=row.approach_dist||'30';
+    document.getElementById('s-ar').value=row.arrive_dist||'15';
+    document.getElementById('s-fname').value=(row.photo_url||'').replace(/\.(jpg|jpeg|png|webp)$/i,'');
+    setEditCoords('s',row.lat,row.lng);
+    checkId('s','spot');
+    const btn=document.querySelector('#screen-spot .btn-submit');
+    if(btn) btn.textContent='💾 スポットを更新';
+    showTab('spot');
+  }else{
+    document.getElementById('f-name').value=row.facility_name||'';
+    document.getElementById('f-id').value=row.facility_id||'';
+    document.getElementById('f-id').dataset.manual='1';
+    document.getElementById('f-tr').value=row.trigger_dist||'50';
+    document.getElementById('f-announce').value=row.announce_text||'';
+    document.getElementById('f-start').value=row.start_date||'';
+    document.getElementById('f-end').value=row.end_date||'';
+    document.getElementById('f-fname').value=(row.photo_url||'').replace(/\.(jpg|jpeg|png|webp)$/i,'');
+    setEditCoords('f',row.lat,row.lng);
+    checkId('f','facility');
+    const btn=document.querySelector('#screen-fac .btn-submit');
+    if(btn) btn.textContent='💾 施設を更新';
+    showTab('fac');
+  }
+  toast('編集モードにしました','ok');
+}
+
+function setEditCoords(p,lat,lng){
+  lat=parseFloat(lat); lng=parseFloat(lng);
+  if(isNaN(lat)||isNaN(lng)) return;
+  const c=document.getElementById(p+'-coord');
+  c.className='coord-box has';
+  c.innerHTML='<div>'+lat.toFixed(6)+', '+lng.toFixed(6)+'</div><div class="coord-sub">履歴データを編集中</div>';
+  initMap(p,lat,lng);
+  updC(p);
 }
 
 function delItem(type,id){
   if(!confirm('「'+id+'」を削除しますか？')) return;
   if(type==='spot'){S.spots=S.spots.filter(r=>r.spot_id!==id);lsj('spots',S.spots);gasWrite('spots',S.spots);}
   else{S.facilities=S.facilities.filter(r=>r.facility_id!==id);lsj('facilities',S.facilities);gasWrite('facilities',S.facilities);}
+  if(S.edit&&S.edit.id===id) S.edit=null;
   updBadge(); renderHist(); toast('削除しました');
 }
 function updBadge(){
