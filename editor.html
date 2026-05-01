@@ -488,6 +488,12 @@ const CONFIG_DEFS = [
   {key:'caution_shigaichi_url', lbl:'市街地 注意音声URL',         desc:'MP3等のURL（テキストより優先）', type:'audio'},
   {key:'caution_koen_url',      lbl:'公園 注意音声URL',           desc:'MP3等のURL（テキストより優先）', type:'audio'},
   {key:'caution_konzai_url',    lbl:'混在 注意音声URL',           desc:'MP3等のURL（テキストより優先）', type:'audio'},
+  {sec:'🎉 特別イベント設定'},
+  {key:'special_enabled',         lbl:'特別イベント有効',          desc:'TRUEで特別アナウンス有効（全コース共通）', type:'bool'},
+  {key:'special_start_date',      lbl:'特別イベント開始日',        desc:'YYYY-MM-DD（空白=常時有効）'},
+  {key:'special_end_date',        lbl:'特別イベント終了日',        desc:'YYYY-MM-DD（空白=常時有効）'},
+  {key:'audio_special_start_url', lbl:'特別スタート音声URL',       desc:'特別期間のスタート時に再生（全コース共通）', type:'audio'},
+  {key:'audio_special_goal_url',  lbl:'特別ゴール音声URL',         desc:'特別期間のゴール到達時に再生（全コース共通）', type:'audio'},
 ];
 
 const COURSE_FIELDS = [
@@ -502,11 +508,6 @@ const COURSE_FIELDS = [
   {key:'end_date',                lbl:'公開終了日',                   desc:'YYYY-MM-DD（空白=常時）'},
   {key:'audio_theme_url',         lbl:'テーマナレーション音声URL',    desc:'コース開始時に流れる音声', type:'audio'},
   {key:'theme_text',              lbl:'テーマナレーション テキスト',  desc:'音声がない場合に読み上げ'},
-  {key:'special_enabled',         lbl:'特別イベント有効',             desc:'TRUEで特別アナウンス有効', type:'bool'},
-  {key:'special_start_date',      lbl:'特別イベント開始日',           desc:'YYYY-MM-DD'},
-  {key:'special_end_date',        lbl:'特別イベント終了日',           desc:'YYYY-MM-DD'},
-  {key:'audio_special_start_url', lbl:'特別スタート音声URL',          desc:'特別期間のスタート時に再生', type:'audio'},
-  {key:'audio_special_goal_url',  lbl:'特別ゴール音声URL',            desc:'特別期間のゴール到達時に再生', type:'audio'},
 ];
 
 const SCHEMAS = {
@@ -1060,7 +1061,7 @@ function renderSpotsList(courseId, container){
 }
 
 function addCourse(){
-  const newCourse={course_id:'course_'+(Date.now()),course_name:'新しいコース',course_type:'市街地',display_order:'99',recommended:'FALSE',duration_min:'30',distance_m:'1000',start_date:'',end_date:'',audio_theme_url:'',theme_text:'',special_enabled:'FALSE',special_start_date:'',special_end_date:'',audio_special_start_url:'',audio_special_goal_url:''};
+  const newCourse={course_id:'course_'+(Date.now()),course_name:'新しいコース',course_type:'市街地',display_order:'99',recommended:'FALSE',duration_min:'30',distance_m:'1000',start_date:'',end_date:'',audio_theme_url:'',theme_text:''};
   state.courses.push(newCourse);
   renderCourses();
   // Scroll to bottom

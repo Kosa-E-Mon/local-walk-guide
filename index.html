@@ -667,7 +667,6 @@ async function initApp() {
       recommended: c.recommended === 'TRUE',
       duration_min: parseInt(c.duration_min) || 0,
       distance_m: parseInt(c.distance_m) || 0,
-      special_enabled: c.special_enabled === 'TRUE',
     }));
 
     allSpots = parseCSV(spotsCSV).map(s => ({
@@ -854,11 +853,11 @@ function isActive(item) {
   return true;
 }
 
-function isSpecialActive(course) {
-  if (!course.special_enabled) return false;
+function isSpecialActive() {
+  if (cfg.special_enabled !== 'TRUE') return false;
   const today = new Date(); today.setHours(0,0,0,0);
-  if (course.special_start_date) { const s = new Date(course.special_start_date); if (!isNaN(s) && today < s) return false; }
-  if (course.special_end_date) { const e = new Date(course.special_end_date); if (!isNaN(e) && today > e) return false; }
+  if (cfg.special_start_date) { const s = new Date(cfg.special_start_date); if (!isNaN(s) && today < s) return false; }
+  if (cfg.special_end_date) { const e = new Date(cfg.special_end_date); if (!isNaN(e) && today > e) return false; }
   return true;
 }
 
@@ -918,7 +917,7 @@ function startWalk(playStartAnnounce) {
   gpsLocked = true; // スタートアナウンス中はGPS到着判定をロック
   setTimeout(() => {
     const startSpot = courseSpots[0];
-    const specialActive = isSpecialActive(currentCourse);
+    const specialActive = isSpecialActive();
     // cautionはstartTextから除去（テーマナレーションまたはcaution音声で流すため重複しない）
     const startText = `最初の目的地は${startSpot.spot_name}です。`;
 
@@ -955,8 +954,8 @@ function startWalk(playStartAnnounce) {
     }
 
     // ① イベント（special_start）→ ② テーマ/caution → ③ 第1スポット
-    if (specialActive && currentCourse.audio_special_start_url) {
-      playVoice(currentCourse.audio_special_start_url, '特別アナウンスです。', () => {
+    if (specialActive && cfg.audio_special_start_url) {
+      playVoice(cfg.audio_special_start_url, '特別アナウンスです。', () => {
         setTimeout(() => playThemeOrCaution(playStart), 300);
       }, true);
     } else {
@@ -1453,7 +1452,7 @@ function nextSpot() {
 // ══════════════════════════════════════
 function showGoal() {
   const today = new Date();
-  const specialActive = isSpecialActive(currentCourse);
+  const specialActive = isSpecialActive();
 
   document.getElementById('cert-course').textContent = currentCourse.course_name;
   document.getElementById('cert-date').textContent = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日 達成`;
@@ -1473,9 +1472,9 @@ function showGoal() {
   const lastSpot = courseSpots[courseSpots.length-1];
   const goalText = `おめでとうございます。${currentCourse.course_name}を完走しました。本日の歩行距離は約${Math.round(totalWalkDist)}メートルです。`;
 
-  if (specialActive && currentCourse.audio_special_goal_url) {
+  if (specialActive && cfg.audio_special_goal_url) {
     playVoice(lastSpot.audio_goal_url, goalText, () => {
-      setTimeout(() => playVoice(currentCourse.audio_special_goal_url, ''), 500);
+      setTimeout(() => playVoice(cfg.audio_special_goal_url, ''), 500);
     });
   } else {
     playVoice(lastSpot.audio_goal_url, goalText);
