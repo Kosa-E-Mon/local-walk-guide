@@ -15,12 +15,12 @@
      取得したMeasurement IDに "G-XXXXXXXXXX" を置き換えてください
      例: G-ABC1234567
 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-FTBE4VS05D"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-FTBE4VS05D');
+  gtag('config', 'G-XXXXXXXXXX');
 </script>
 
 <!-- ══ Google Identity Services (OAuth2) ══ -->
@@ -193,7 +193,7 @@ body {
 .voice-log { margin: 7px 20px 0; background: rgba(58,122,74,.07); border: 1px solid rgba(58,122,74,.18); border-radius: 8px; padding: 8px 13px; font-size: 11px; color: var(--green); min-height: 32px; display: flex; align-items: center; gap: 8px; letter-spacing: .04em; line-height: 1.5; }
 
 /* マップ */
-.map-container { margin: 8px 20px 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); height: 160px; position: relative; }
+.map-container { margin: 8px 20px 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); height: 320px; position: relative; }
 #leaflet-map { width: 100%; height: 100%; }
 
 /* ARボタン */
@@ -221,6 +221,29 @@ body {
 .btn-arrived { background: var(--paper); border: 2px solid var(--ink); color: var(--ink); padding: 13px; font-family: var(--font-title); font-size: 14px; letter-spacing: .12em; border-radius: var(--radius); cursor: pointer; width: 100%; transition: background .2s, color .2s; }
 .btn-arrived:active { background: var(--ink); color: var(--paper); }
 .manual-hint { font-size: 10px; color: var(--muted); text-align: center; }
+.btn-arrived:disabled { opacity: .45; cursor: default; background: var(--border); color: var(--muted); border-color: var(--border); }
+
+/* 次スポット表示 */
+.nav-next-spot { font-size: 10px; color: var(--muted); letter-spacing: .06em; margin-top: 3px; padding-left: 2px; min-height: 14px; }
+.nav-next-spot span { color: var(--primary); font-weight: 500; }
+
+/* ARキャリブレーションオーバーレイ */
+.ar-calib-overlay {
+  position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,.72);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 32px; animation: fadeIn .3s ease;
+}
+.ar-calib-icon { font-size: 48px; }
+.ar-calib-title { font-family: var(--font-title); font-size: 17px; font-weight: 700; color: white; letter-spacing: .08em; text-align: center; }
+.ar-calib-desc { font-size: 12px; color: rgba(255,255,255,.65); text-align: center; line-height: 1.9; letter-spacing: .04em; }
+.ar-calib-bar { width: 200px; height: 3px; background: rgba(255,255,255,.15); border-radius: 2px; overflow: hidden; }
+.ar-calib-bar-fill { height: 100%; background: var(--primary); border-radius: 2px; animation: calibProgress 3s ease forwards; }
+@keyframes calibProgress { from{width:0} to{width:100%} }
+.ar-calib-skip { background: transparent; border: 1px solid rgba(255,255,255,.25); color: rgba(255,255,255,.5); padding: 7px 20px; border-radius: 20px; font-size: 11px; cursor: pointer; letter-spacing: .08em; }
+
+/* 精度警告バナー */
+.ar-accuracy-warn { position: absolute; bottom: 70px; left: 16px; right: 16px; z-index: 15; background: rgba(200,112,32,.85); border: 1px solid rgba(200,112,32,.9); border-radius: 8px; padding: 8px 13px; font-size: 11px; color: white; text-align: center; letter-spacing: .04em; display: none; }
+.ar-accuracy-warn.show { display: block; animation: fadeIn .3s ease; }
 
 /* ══ AR画面 ══ */
 #screen-ar { background: #000; position: relative; }
@@ -511,6 +534,7 @@ body {
       <div class="nav-spot-name" id="nav-spot-name"></div>
       <button class="btn-nav-home" onclick="confirmGoHome()" title="ホームへ戻る">⌂</button>
     </div>
+    <div class="nav-next-spot" id="nav-next-spot"></div>
   </div>
   <div class="distance-panel" id="distance-panel">
     <div class="dist-icon" id="dist-icon">🚶</div>
@@ -543,6 +567,16 @@ body {
 <!-- ④ AR -->
 <div id="screen-ar" class="screen">
   <video id="ar-video" autoplay playsinline muted></video>
+  <!-- キャリブレーションオーバーレイ -->
+  <div class="ar-calib-overlay" id="ar-calib-overlay">
+    <div class="ar-calib-icon">📱</div>
+    <div class="ar-calib-title">コンパスを校正してください</div>
+    <div class="ar-calib-desc">スマホを持ったまま<br>8の字を描くように<br>3〜5回ゆっくり動かしてください</div>
+    <div class="ar-calib-bar"><div class="ar-calib-bar-fill"></div></div>
+    <button class="ar-calib-skip" onclick="dismissCalib()">スキップ</button>
+  </div>
+  <!-- 精度警告バナー -->
+  <div class="ar-accuracy-warn" id="ar-accuracy-warn">⚠️ コンパスの精度が低下しています。端末を8の字に振って校正してください。</div>
   <div class="ar-overlay">
     <div class="ar-dir-outer">
       <div class="ar-dir-inner" id="ar-dir-inner">
@@ -860,6 +894,7 @@ async function initApp() {
       lng: parseFloat(s.lng),
       approach_dist: parseInt(s.approach_dist) || 50,
       arrive_dist: parseInt(s.arrive_dist) || 15,
+      audio_explain_url: s.audio_explain_url || null,
     }));
 
     allCourseSpots = parseCSV(csCSV).map(cs => ({
@@ -912,16 +947,11 @@ function applyConfig() {
   document.getElementById('home-title').textContent = title;
   if (cfg.app_subtitle) document.getElementById('home-subtitle').textContent = cfg.app_subtitle;
 
-  // 土地名（area_name ＋ prefecture/city から生成）
+  // エリア表示（area_display で組み合わせを選択）
   const areaEl = document.getElementById('home-area-name');
-  if (areaEl) {
-    const parts = [cfg.prefecture, cfg.city, cfg.area_name].filter(Boolean);
-    areaEl.textContent = parts.join('　');
-  }
+  if (areaEl) areaEl.textContent = buildAreaLabel();
 
   // ヘッダー画像
-  // header_image_url（GitHub Pages等の直接URL）を優先。
-  // なければ旧来の header_image_id（Drive）にフォールバック。
   const headerImgSrc = cfg.header_image_url
     || (cfg.header_image_id ? (drivePhotoUrl(cfg.header_image_id) || cfg.header_image_id) : null);
   if (cfg.header_type === 'image' && headerImgSrc) {
@@ -929,8 +959,57 @@ function applyConfig() {
     img.className = 'home-header-img';
     img.src = headerImgSrc;
     document.getElementById('home-header').prepend(img);
+    // header_style を画像ロード後に適用
+    img.onload = applyHeaderStyle;
+    applyHeaderStyle();
   }
 }
+
+// ── エリア表示ラベル生成 ──
+function buildAreaLabel() {
+  const pref   = cfg.area_pref   || cfg.prefecture || '';
+  const city   = cfg.area_city   || cfg.city       || '';
+  const town   = cfg.area_town   || '';
+  const custom = cfg.area_name   || '';
+  const mode   = cfg.area_display || 'custom';
+  const map = {
+    pref:           [pref],
+    city:           [city],
+    town:           [town],
+    'pref+city':    [pref, city],
+    'pref+town':    [pref, town],
+    'city+town':    [city, town],
+    'pref+city+town': [pref, city, town],
+  };
+  if (map[mode]) return map[mode].filter(Boolean).join('');
+  // custom or fallback
+  return custom || [pref, city, town].filter(Boolean).join('　');
+}
+
+// ── ヘッダースタイル適用（A/B/C） ──
+function applyHeaderStyle() {
+  const style   = cfg.header_style || 'A';
+  const header  = document.getElementById('home-header');
+  const overlay = header.querySelector('.home-header-overlay');
+  const img     = header.querySelector('.home-header-img');
+  if (!img) return;
+
+  if (style === 'A') {
+    // デフォルト: 画像を明るく、下半分だけにグラデーション
+    img.style.opacity = '0.65';
+    overlay.style.background = 'linear-gradient(to top, rgba(28,26,22,.88) 0%, rgba(28,26,22,.15) 55%, transparent 100%)';
+  } else if (style === 'B') {
+    // 写真ゾーン独立: 画像鮮明、テキストエリアは不透明背景
+    img.style.opacity = '0.88';
+    overlay.style.background = 'linear-gradient(to top, rgba(28,26,22,1) 0%, rgba(28,26,22,.95) 28%, rgba(28,26,22,.1) 60%, transparent 100%)';
+  } else if (style === 'C') {
+    // text-shadow方式: 画像そのまま、テキストに影
+    img.style.opacity = '0.78';
+    overlay.style.background = 'none';
+    header.querySelectorAll('.home-badge,.home-title,.home-subtitle,.home-area-name').forEach(el => {
+      el.style.textShadow = '0 1px 8px rgba(0,0,0,.95), 0 2px 24px rgba(0,0,0,.8)';
+    });
+  }
 
 // ══════════════════════════════════════
 // ホーム描画
@@ -1306,34 +1385,49 @@ function playVoice(url, fallback, onEnd, force) {
     try {
       if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       voicePlaying = true;
+      updateArrivedButton();
       const audio = new Audio(resolved);
-      audio.addEventListener('error', () => { voicePlaying = false; lastVoiceUrl = null; speakTTS(fallback, onEnd); });
-      audio.addEventListener('ended', () => { voicePlaying = false; if (onEnd) onEnd(); });
+      audio.addEventListener('error', () => {
+        voicePlaying = false; lastVoiceUrl = null;
+        updateArrivedButton();
+        speakTTS(fallback, onEnd);
+      });
+      audio.addEventListener('ended', () => {
+        voicePlaying = false;
+        updateArrivedButton();
+        if (onEnd) onEnd();
+      });
       audio.play().then(() => {
         currentAudio = audio;
         setVoiceLog('🔊', fallback || url);
         lastVoiceText = fallback;
         lastVoiceUrl = resolved;
-      }).catch(() => { voicePlaying = false; lastVoiceUrl = null; speakTTS(fallback, onEnd); });
+      }).catch(() => {
+        voicePlaying = false;
+        lastVoiceUrl = null;
+        updateArrivedButton();
+        speakTTS(fallback, onEnd);
+      });
       return;
-    } catch(e) { voicePlaying = false; }
+    } catch(e) { voicePlaying = false; updateArrivedButton(); }
   }
   lastVoiceUrl = null;
   speakTTS(fallback, onEnd);
 }
 
 function speakTTS(text, onEnd) {
-  if (!text || !('speechSynthesis' in window)) { voicePlaying = false; if (onEnd) onEnd(); return; }
+  if (!text || !('speechSynthesis' in window)) { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); return; }
   speechSynthesis.cancel();
   lastVoiceText = text;
   voicePlaying = true;
+  updateArrivedButton();
   const u = new SpeechSynthesisUtterance(text);
   u.lang='ja-JP'; u.rate=0.88; u.pitch=1.0; u.volume=1.0;
   const v = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
   if (v) u.voice = v;
-  u.onend = () => { voicePlaying = false; if (onEnd) onEnd(); };
-  u.onerror = () => { voicePlaying = false; };
-  if (onEnd) u.onend = () => { voicePlaying = false; onEnd(); };
+  u.onend = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
+  u.onerror = () => { voicePlaying = false; updateArrivedButton(); };
+  if (onEnd) u.onend = () => { voicePlaying = false; updateArrivedButton(); onEnd(); };
   setVoiceLog('🔊', text);
   speechSynthesis.speak(u);
 }
@@ -1393,7 +1487,11 @@ function onGPSUpdate(pos) {
   if (leafletMap) {
     if (!userMarker) {
       userMarker = L.circleMarker([lat,lng], { radius:8, fillColor:'#3A7A4A', fillOpacity:.9, color:'white', weight:2 }).addTo(leafletMap);
-    } else { userMarker.setLatLng([lat,lng]); }
+      fitMapBounds(); // 初回GPS取得時に現在地+目的地でフィット
+    } else {
+      userMarker.setLatLng([lat,lng]);
+      fitMapBounds(); // 位置更新ごとに調整
+    }
   }
 
   // 施設チェック
@@ -1514,7 +1612,20 @@ function updateMapDest() {
   const icon = L.divIcon({ html:`<div style="background:var(--primary,#B83232);width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`, iconSize:[18,18], iconAnchor:[9,18], className:'' });
   destMarker = L.marker([spot.lat,spot.lng],{icon}).addTo(leafletMap).bindPopup(spot.spot_name);
   destCircle = L.circle([spot.lat,spot.lng],{ radius:spot.arrive_dist, color:'#B83232', fillColor:'#B83232', fillOpacity:.07, weight:1, dashArray:'4 4' }).addTo(leafletMap);
-  leafletMap.setView([spot.lat,spot.lng],16);
+  fitMapBounds();
+}
+
+// 現在地と目的地の両方が収まるようにフィット
+function fitMapBounds() {
+  if (!leafletMap) return;
+  const spot = courseSpots[currentIdx];
+  const points = [[spot.lat, spot.lng]];
+  if (lastWalkPos) points.push([lastWalkPos.lat, lastWalkPos.lng]);
+  if (points.length === 1) {
+    leafletMap.setView(points[0], 17);
+  } else {
+    leafletMap.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 17 });
+  }
 }
 
 // ══════════════════════════════════════
@@ -1528,6 +1639,16 @@ async function openAR() {
   document.getElementById('ar-spot-name').textContent = spot.spot_name;
   document.getElementById('ar-dist').innerHTML = `${arLastDist}<span>m</span>`;
   document.getElementById('ar-compass').textContent = '方位取得中…';
+
+  // キャリブレーションオーバーレイを表示し、3秒後に自動非表示
+  const calib = document.getElementById('ar-calib-overlay');
+  if (calib) {
+    calib.style.display = 'flex';
+    // バーアニメーションをリセット
+    const bar = calib.querySelector('.ar-calib-bar-fill');
+    if (bar) { bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = 'calibProgress 3s ease forwards'; }
+    setTimeout(() => dismissCalib(), 3000);
+  }
 
   try {
     arStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
@@ -1546,21 +1667,26 @@ async function openAR() {
   }, 200);
 }
 
+function dismissCalib() {
+  const calib = document.getElementById('ar-calib-overlay');
+  if (calib) calib.style.display = 'none';
+}
+
 function onDeviceOrientationAbsolute(e) {
   if (e.alpha === null) return;
   arAbsoluteSupported = true;
-  const heading = 360 - e.alpha; // Android絶対方位 → 真北基準コンパス方位
-  updateARDirection(heading);
+  const heading = 360 - e.alpha;
+  updateARDirection(heading, e.webkitCompassAccuracy);
 }
 
 function onDeviceOrientationRelative(e) {
-  if (arAbsoluteSupported) return; // 絶対方位が使えるなら無視
+  if (arAbsoluteSupported) return;
   const heading = e.webkitCompassHeading ?? (e.alpha !== null ? 360 - e.alpha : null);
   if (heading === null) return;
-  updateARDirection(heading);
+  updateARDirection(heading, e.webkitCompassAccuracy);
 }
 
-function updateARDirection(deviceHeading) {
+function updateARDirection(deviceHeading, accuracy) {
   if (!lastWalkPos) return;
   const spot = courseSpots[currentIdx];
   const targetBearing = bearing(lastWalkPos.lat, lastWalkPos.lng, spot.lat, spot.lng);
@@ -1570,6 +1696,12 @@ function updateARDirection(deviceHeading) {
   const inner = document.getElementById('ar-dir-inner');
   if (inner) inner.style.transform = `rotate(${relative}deg)`;
   document.getElementById('ar-compass').textContent = `目標方位: ${Math.round(targetBearing)}°`;
+
+  // 精度警告（iOSのwebkitCompassAccuracyが使える場合）
+  const warnEl = document.getElementById('ar-accuracy-warn');
+  if (warnEl && accuracy !== undefined) {
+    warnEl.classList.toggle('show', accuracy > 20);
+  }
 }
 
 // iOS用（既存のdeviceorientationイベント、webkitCompassHeading対応）
@@ -1611,6 +1743,20 @@ function updateNavScreen() {
   document.getElementById('progress-fill').style.width = progress+'%';
   document.getElementById('nav-step-label').textContent = `STEP ${currentIdx+1} / ${courseSpots.length}`;
   document.getElementById('nav-spot-name').textContent = spot.spot_name+' へ';
+
+  // 次スポット表示
+  const nextEl = document.getElementById('nav-next-spot');
+  if (nextEl) {
+    const nextIdx = currentIdx + 1;
+    if (nextIdx < courseSpots.length) {
+      const isGoal = nextIdx === courseSpots.length - 1;
+      const nextSpotName = courseSpots[nextIdx].spot_name;
+      nextEl.innerHTML = `次→ <span>${nextSpotName}</span>${isGoal ? '（ゴール）' : ''}`;
+    } else {
+      nextEl.innerHTML = '<span>このスポットがゴールです</span>';
+    }
+  }
+
   buildSpotsRow();
   approachNotified=false; arrivedDetected=false;
   document.getElementById('dist-number').innerHTML='--<span>m</span>';
@@ -1619,6 +1765,16 @@ function updateNavScreen() {
   document.getElementById('ring-label').textContent='--';
   document.getElementById('distance-panel').className='distance-panel';
   document.getElementById('btn-ar').classList.remove('show');
+  updateArrivedButton();
+}
+
+// 音声再生中は「着いた！」ボタンを無効化
+function updateArrivedButton() {
+  const btn = document.getElementById('btn-arrived');
+  if (!btn) return;
+  const locked = voicePlaying || gpsLocked;
+  btn.disabled = locked;
+  btn.textContent = locked ? '🔊 音声ガイド再生中…' : '📍 着いた！（手動）';
 }
 
 // ══════════════════════════════════════
@@ -1659,6 +1815,14 @@ function showExplain(spot) {
 
   document.getElementById('btn-next').textContent = isLast ? '🏮 表彰状を受け取る' : '次のスポットへ →';
   showScreen('screen-explain');
+
+  // 解説音声（audio_explain_url → TTSフォールバック）
+  // 少し遅らせて到着音声との競合を避ける
+  setTimeout(() => {
+    const explainText = spot.description ? spot.description.slice(0, 120) : '';
+    playVoice(spot.audio_explain_url, explainText, null, true);
+    // lastVoiceUrl/Text を解説用に更新（「もう一度聴く」が解説を再生するように）
+  }, 600);
 }
 
 // ══════════════════════════════════════
@@ -1943,7 +2107,7 @@ function trackScreen(screenName) {
 // 4. 「APIとサービス」→「ライブラリ」→「Google Drive API」を有効化
 // 5. 発行されたクライアントIDを下記に貼り付け
 // ─────────────────────────────────────
-const GOOGLE_CLIENT_ID = '622715087479-pvn2grsei9jnmit3jqlsnbr0d99ede55.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const BACKUP_FILENAME = 'lwg_backup.json';
@@ -1957,7 +2121,6 @@ let gBackupFileId = null;
 // ── 初期化 ──
 function initGoogleAuth() {
   if (!window.google?.accounts?.oauth2) {
-    // GISライブラリがまだ読み込まれていない場合は少し待ってリトライ
     setTimeout(initGoogleAuth, 500);
     return;
   }
@@ -1970,16 +2133,34 @@ function initGoogleAuth() {
       gTokenExpiry  = Date.now() + (resp.expires_in - 60) * 1000;
       await fetchGUserInfo();
       updateCloudUI();
-      await syncCloud(); // ログイン直後に同期
+      await syncCloud();
     }
   });
-  // セッション情報をLocalStorageから復元（メール表示のみ）
+  // セッション情報をLocalStorageから復元
   const saved = lsGet('lwg_cloud_session', null);
   if (saved?.email) {
     gUserEmail = saved.email;
     updateCloudUI();
-    // トークンは失効しているため同期は行わない（手動or次回ログインで）
-    showSyncStatus('idle', '前回ログイン済み（再ログインで同期）');
+    // サイレントでトークンを再取得して自動同期（ユーザー操作不要）
+    showSyncStatus('syncing', '同期中…');
+    const silentClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: async (resp) => {
+        if (!resp.error) {
+          gAccessToken = resp.access_token;
+          gTokenExpiry  = Date.now() + (resp.expires_in - 60) * 1000;
+          await syncCloud();
+        } else {
+          showSyncStatus('idle', '再ログインで同期できます');
+        }
+      }
+    });
+    try {
+      silentClient.requestAccessToken({ prompt: '' }); // ポップアップなしで試みる
+    } catch(e) {
+      showSyncStatus('idle', '再ログインで同期できます');
+    }
   }
 }
 
@@ -2233,6 +2414,17 @@ window.addEventListener('load', () => {
   // Google OAuth初期化
   initGoogleAuth();
   initApp();
+
+  // Page Visibility API: バックグラウンドから復帰時に音声状態をリセット
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      voicePlaying = false;
+      gpsLocked = false;
+      updateArrivedButton();
+    }
+  });
 });
 </script>
 </body>
