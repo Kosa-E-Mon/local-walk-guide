@@ -281,6 +281,7 @@ body {
 .explain-keyword { display: inline-block; background: var(--paper); border: 1px solid var(--border); font-size: 11px; color: var(--gold); padding: 2px 9px; border-radius: 20px; margin: 2px 2px 2px 0; }
 .btn-next { margin: 14px 20px 24px; background: var(--primary); color: white; border: none; padding: 14px; font-family: var(--font-title); font-size: var(--font-size-heading); letter-spacing: .15em; border-radius: var(--radius); cursor: pointer; width: calc(100% - 40px); transition: opacity .2s; }
 .btn-next:active { opacity: .8; }
+.btn-next:disabled { opacity: .5; cursor: default; background: var(--muted); letter-spacing: .06em; }
 
 /* ══ 土地名 ══ */
 .home-area-name { font-size: 10px; color: rgba(250,247,241,.22); letter-spacing: .25em; text-align: right; padding: 4px 0 0; position: relative; z-index: 1; }
@@ -758,6 +759,8 @@ let arStream = null, arWatchId = null, arLastDist = 0;
 let voicePlaying = false; // 音声重複再生ロック
 let gpsLocked = false;   // スタートアナウンス中のGPS到着判定ロック
 let explainCurrentSpot = null; // 解説画面で現在表示中のスポット（「もう一度聴く」用）
+let nextButtonLocked = false;  // 「次へ」ボタンロック中フラグ
+let nextLockTimer = null;      // 「次へ」タイマー解除用
 
 // ══════════════════════════════════════
 // ローカルストレージ
@@ -1379,6 +1382,27 @@ function unlockAudio() {
   a.play().then(() => { audioUnlocked = true; }).catch(() => {});
 }
 
+
+// ── 「次へ」ボタンのロック・解除 ──
+function lockNextButton() {
+  nextButtonLocked = true;
+  const btn = document.getElementById('btn-next');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.dataset.origText = btn.textContent;
+  btn.textContent = '🔊 音声ガイド再生中…';
+}
+
+function unlockNextButton() {
+  if (!nextButtonLocked) return;
+  nextButtonLocked = false;
+  if (nextLockTimer) { clearTimeout(nextLockTimer); nextLockTimer = null; }
+  const btn = document.getElementById('btn-next');
+  if (!btn) return;
+  btn.disabled = false;
+  if (btn.dataset.origText) { btn.textContent = btn.dataset.origText; }
+}
+
 function playVoice(url, fallback, onEnd, force) {
   // 再生中はスキップ（forceフラグで上書き可）
   if (voicePlaying && !force) return;
@@ -1799,18 +1823,34 @@ function autoArrive() {
   trackEvent('spot_arrive', { spot_name: courseSpots[currentIdx].spot_name, spot_order: courseSpots[currentIdx].order, method: 'auto', course_name: currentCourse?.course_name });
   const spot = courseSpots[currentIdx];
   showExplain(spot);
-  playArriveSequence(spot);
+  startArriveWithLock(spot);
 }
 function manualArrive() {
   // GA4: スポット手動到着イベント
   trackEvent('spot_arrive', { spot_name: courseSpots[currentIdx].spot_name, spot_order: courseSpots[currentIdx].order, method: 'manual', course_name: currentCourse?.course_name });
   const spot = courseSpots[currentIdx];
   showExplain(spot);
-  playArriveSequence(spot);
+  startArriveWithLock(spot);
+}
+
+// 到着時の「次へ」ボタンロック → 音声シーケンス開始
+function startArriveWithLock(spot) {
+  // 「次へ」ボタンを即ロック
+  lockNextButton();
+
+  // config の next_lock_sec（秒）が設定されていればタイマー解除を保険としてセット
+  const lockSec = parseInt(cfg.next_lock_sec) || 0;
+  if (lockSec > 0) {
+    nextLockTimer = setTimeout(unlockNextButton, lockSec * 1000);
+  }
+
+  // 音声シーケンス再生（完了時にボタン解除）
+  playArriveSequence(spot, unlockNextButton);
 }
 
 // 到着音声 → 解説音声 の順に再生（MP3優先、なければTTS）
-function playArriveSequence(spot) {
+// onComplete: 音声シーケンス全完了時に呼ぶコールバック（「次へ」ボタン解除に使用）
+function playArriveSequence(spot, onComplete) {
   const arriveText = `${spot.spot_name}に到着しました。`;
   const explainText = spot.description ? spot.description.slice(0, 120) : '';
 
@@ -1818,7 +1858,11 @@ function playArriveSequence(spot) {
   function playExplain(suppressTTS) {
     const fallback = suppressTTS ? null : explainText;
     if (spot.audio_explain_url || (!suppressTTS && explainText)) {
-      playVoice(spot.audio_explain_url, fallback, null, true);
+      playVoice(spot.audio_explain_url, fallback, () => {
+        if (onComplete) onComplete(); // 解説音声完了 → 「次へ」解除
+      }, true);
+    } else {
+      if (onComplete) onComplete(); // 再生なし → 即解除
     }
   }
 
