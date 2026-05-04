@@ -757,6 +757,7 @@ let facilityTimer = null;
 let arStream = null, arWatchId = null, arLastDist = 0;
 let voicePlaying = false; // 音声重複再生ロック
 let gpsLocked = false;   // スタートアナウンス中のGPS到着判定ロック
+let explainCurrentSpot = null; // 解説画面で現在表示中のスポット（「もう一度聴く」用）
 
 // ══════════════════════════════════════
 // ローカルストレージ
@@ -1381,10 +1382,12 @@ function unlockAudio() {
 function playVoice(url, fallback, onEnd, force) {
   // 再生中はスキップ（forceフラグで上書き可）
   if (voicePlaying && !force) return;
+  // TTS・MP3 どちらに進むかに関わらず、先に既存の再生を停止する
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
   const resolved = driveUrl(url);
   if (resolved) {
     try {
-      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       voicePlaying = true;
       updateArrivedButton();
       const audio = new Audio(resolved);
@@ -1436,8 +1439,18 @@ function speakTTS(text, onEnd) {
 // mp3があればmp3を、なければTTSで再生（ロック強制解除して再生）
 function replayVoice() {
   voicePlaying = false;
-  if (lastVoiceUrl) {
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+
+  if (explainCurrentSpot) {
+    const spot = explainCurrentSpot;
+    const explainText = spot.description ? spot.description.slice(0, 120) : '';
+    const arriveText  = `${spot.spot_name}に到着しました。`;
+    // 優先順位: audio_explain_url → audio_arrive_url → TTS（解説 or 到着テキスト）
+    const replayUrl  = spot.audio_explain_url || spot.audio_arrive_url || null;
+    const replayText = explainText || arriveText;
+    playVoice(replayUrl, replayText, null, true);
+  } else if (lastVoiceUrl) {
     voicePlaying = true;
     const audio = new Audio(lastVoiceUrl);
     audio.addEventListener('error', () => { voicePlaying = false; speakTTS(lastVoiceText); });
@@ -1784,12 +1797,38 @@ function updateArrivedButton() {
 function autoArrive() {
   // GA4: スポット自動到着イベント
   trackEvent('spot_arrive', { spot_name: courseSpots[currentIdx].spot_name, spot_order: courseSpots[currentIdx].order, method: 'auto', course_name: currentCourse?.course_name });
-  showExplain(courseSpots[currentIdx]); playVoice(courseSpots[currentIdx].audio_arrive_url, `${courseSpots[currentIdx].spot_name}に到着しました。${courseSpots[currentIdx].description}`);
+  const spot = courseSpots[currentIdx];
+  showExplain(spot);
+  playArriveSequence(spot);
 }
 function manualArrive() {
   // GA4: スポット手動到着イベント
   trackEvent('spot_arrive', { spot_name: courseSpots[currentIdx].spot_name, spot_order: courseSpots[currentIdx].order, method: 'manual', course_name: currentCourse?.course_name });
-  showExplain(courseSpots[currentIdx]); playVoice(courseSpots[currentIdx].audio_arrive_url, `${courseSpots[currentIdx].spot_name}に到着しました。${courseSpots[currentIdx].description}`);
+  const spot = courseSpots[currentIdx];
+  showExplain(spot);
+  playArriveSequence(spot);
+}
+
+// 到着音声 → 解説音声 の順に再生（MP3優先、なければTTS）
+function playArriveSequence(spot) {
+  const arriveText = `${spot.spot_name}に到着しました。`;
+  const explainText = spot.description ? spot.description.slice(0, 120) : '';
+
+  function playExplain() {
+    // 解説音声：audio_explain_url があればMP3、なければTTS
+    if (spot.audio_explain_url || explainText) {
+      playVoice(spot.audio_explain_url, explainText, null, true);
+    }
+  }
+
+  // 到着音声：audio_arrive_url があればMP3、なければTTS → 終了後に解説音声
+  if (spot.audio_arrive_url || arriveText) {
+    playVoice(spot.audio_arrive_url, arriveText, () => {
+      setTimeout(playExplain, 400);
+    });
+  } else {
+    playExplain();
+  }
 }
 
 function showExplain(spot) {
@@ -1815,15 +1854,9 @@ function showExplain(spot) {
   if (spot.keywords) spot.keywords.split(',').forEach(k => { k=k.trim(); if(!k)return; const s=document.createElement('span'); s.className='explain-keyword'; s.textContent=k; kw.appendChild(s); });
 
   document.getElementById('btn-next').textContent = isLast ? '🏮 表彰状を受け取る' : '次のスポットへ →';
+  explainCurrentSpot = spot; // 「もう一度聴く」用にスポットを保持
   showScreen('screen-explain');
-
-  // 解説音声（audio_explain_url → TTSフォールバック）
-  // 少し遅らせて到着音声との競合を避ける
-  setTimeout(() => {
-    const explainText = spot.description ? spot.description.slice(0, 120) : '';
-    playVoice(spot.audio_explain_url, explainText, null, true);
-    // lastVoiceUrl/Text を解説用に更新（「もう一度聴く」が解説を再生するように）
-  }, 600);
+  // ※ 音声再生は呼び出し元（playArriveSequence）が到着音声 → 解説音声の順で制御する
 }
 
 // ══════════════════════════════════════
