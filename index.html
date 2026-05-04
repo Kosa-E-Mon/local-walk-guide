@@ -1814,20 +1814,48 @@ function playArriveSequence(spot) {
   const arriveText = `${spot.spot_name}に到着しました。`;
   const explainText = spot.description ? spot.description.slice(0, 120) : '';
 
-  function playExplain() {
-    // 解説音声：audio_explain_url があればMP3、なければTTS
-    if (spot.audio_explain_url || explainText) {
-      playVoice(spot.audio_explain_url, explainText, null, true);
+  // suppressTTS=true のとき、解説はMP3のみ（TTSフォールバックなし）
+  function playExplain(suppressTTS) {
+    const fallback = suppressTTS ? null : explainText;
+    if (spot.audio_explain_url || (!suppressTTS && explainText)) {
+      playVoice(spot.audio_explain_url, fallback, null, true);
     }
   }
 
-  // 到着音声：audio_arrive_url があればMP3、なければTTS → 終了後に解説音声
-  if (spot.audio_arrive_url || arriveText) {
-    playVoice(spot.audio_arrive_url, arriveText, () => {
-      setTimeout(playExplain, 400);
+  // 到着音声：audio_arrive_url があればMP3を直接制御し再生結果でTTS抑制フラグを切り替える
+  const resolved = driveUrl(spot.audio_arrive_url);
+  if (resolved) {
+    // MP3再生を試みる
+    voicePlaying = true;
+    updateArrivedButton();
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    const audio = new Audio(resolved);
+    audio.addEventListener('error', () => {
+      // MP3失敗 → TTSで到着告知 → 解説もTTS許可
+      voicePlaying = false; lastVoiceUrl = null; updateArrivedButton();
+      speakTTS(arriveText, () => setTimeout(() => playExplain(false), 400));
     });
+    audio.addEventListener('ended', () => {
+      // MP3成功再生完了 → 解説のTTSを抑制
+      voicePlaying = false; updateArrivedButton();
+      setTimeout(() => playExplain(true), 400);
+    });
+    audio.play().then(() => {
+      currentAudio = audio;
+      setVoiceLog('🔊', arriveText || spot.audio_arrive_url);
+      lastVoiceText = arriveText;
+      lastVoiceUrl = resolved;
+    }).catch(() => {
+      // 再生拒否（ユーザー操作前など）→ TTSで到着告知 → 解説もTTS許可
+      voicePlaying = false; lastVoiceUrl = null; updateArrivedButton();
+      speakTTS(arriveText, () => setTimeout(() => playExplain(false), 400));
+    });
+  } else if (arriveText) {
+    // arrive URLなし → TTSで到着告知 → 解説もTTS許可
+    speakTTS(arriveText, () => setTimeout(() => playExplain(false), 400));
   } else {
-    playExplain();
+    playExplain(false);
   }
 }
 
