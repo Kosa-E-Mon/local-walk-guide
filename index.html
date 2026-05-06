@@ -1454,9 +1454,8 @@ function speakTTS(text, onEnd) {
   u.lang='ja-JP'; u.rate=0.88; u.pitch=1.0; u.volume=1.0;
   const v = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
   if (v) u.voice = v;
-  u.onend = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
-  u.onerror = () => { voicePlaying = false; updateArrivedButton(); };
-  if (onEnd) u.onend = () => { voicePlaying = false; updateArrivedButton(); onEnd(); };
+  u.onerror = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
+  u.onend  = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
   setVoiceLog('🔊', text);
   speechSynthesis.speak(u);
 }
