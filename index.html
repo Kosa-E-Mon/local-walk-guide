@@ -94,20 +94,7 @@ body {
 }
 .home-header-img { position: absolute; inset: 0; object-fit: cover; width: 100%; height: 100%; opacity: .35; }
 .home-header-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(28,26,22,.95) 0%, rgba(28,26,22,.3) 100%); }
-.home-badge {
-  display: inline-block;
-  border: 1px solid var(--badge-border, var(--primary));
-  color: var(--badge-color, var(--primary));
-  background: var(--badge-bg, transparent);
-  font-size: var(--badge-font-size, 9px);
-  letter-spacing: .25em;
-  padding: 3px 10px;
-  margin-bottom: 12px;
-  position: relative;
-  z-index: 1;
-  opacity: var(--badge-opacity, 1);
-  transition: opacity .3s;
-}
+.home-badge { display: inline-block; border: 1px solid var(--primary); color: var(--primary); font-size: 9px; letter-spacing: .25em; padding: 3px 10px; margin-bottom: 12px; position: relative; z-index: 1; }
 .home-title { font-family: var(--font-title); font-size: 30px; font-weight: 700; color: #FAF7F1; line-height: 1.2; letter-spacing: .05em; position: relative; z-index: 1; margin-bottom: 3px; }
 .home-subtitle { font-size: 11px; color: rgba(250,247,241,.35); letter-spacing: .1em; position: relative; z-index: 1; }
 
@@ -980,101 +967,9 @@ function applyConfig() {
     img.onload = applyHeaderStyle;
     applyHeaderStyle();
   }
-
-  // ── バッジカスタマイズ ──
-  applyBadgeConfig();
 }
 
-// ── バッジカスタマイズ適用 ──
-function applyBadgeConfig() {
-  const badge = document.querySelector('.home-badge');
-  if (!badge) return;
-  const r = document.documentElement;
-
-  // テキスト
-  const text = cfg.badge_text;
-  if (text !== undefined) badge.textContent = text;
-
-  // 表示/非表示（badge_visible = false で非表示）
-  if (cfg.badge_visible === 'false' || cfg.badge_visible === '0') {
-    badge.style.display = 'none';
-    return;
-  }
-
-  // 文字色
-  if (cfg.badge_color)     r.style.setProperty('--badge-color',     cfg.badge_color);
-  // 枠線色
-  if (cfg.badge_border)    r.style.setProperty('--badge-border',    cfg.badge_border);
-  // 背景色（塗りつぶし or 透過）
-  if (cfg.badge_bg)        r.style.setProperty('--badge-bg',        cfg.badge_bg);
-  // フォントサイズ（例: 9px, 12px）
-  if (cfg.badge_font_size) r.style.setProperty('--badge-font-size', cfg.badge_font_size);
-  // 透明度（0〜1 または 0%〜100%）
-  if (cfg.badge_opacity !== undefined && cfg.badge_opacity !== '') {
-    let op = cfg.badge_opacity;
-    if (String(op).includes('%')) op = parseFloat(op) / 100;
-    r.style.setProperty('--badge-opacity', String(Math.min(1, Math.max(0, parseFloat(op) || 1))));
-  }
-
-  // ── 配置位置 ──
-  // badge_h : left（デフォルト）/ center / right
-  // badge_v : bottom（デフォルト）/ top / middle
-  const bh = (cfg.badge_h || 'left').trim().toLowerCase();
-  const bv = (cfg.badge_v || 'bottom').trim().toLowerCase();
-
-  if (bv === 'top' || bv === 'middle') {
-    // 絶対配置モード（ヘッダーは position:relative 済み）
-    badge.style.position    = 'absolute';
-    badge.style.marginBottom = '0';
-
-    // 縦位置
-    if (bv === 'top') {
-      badge.style.top    = '16px';
-      badge.style.bottom = 'auto';
-    } else { // middle
-      badge.style.top    = '50%';
-      badge.style.bottom = 'auto';
-    }
-
-    // 横位置 + transform
-    if (bh === 'center') {
-      badge.style.left      = '50%';
-      badge.style.right     = 'auto';
-      badge.style.transform = (bv === 'middle') ? 'translate(-50%, -50%)' : 'translateX(-50%)';
-    } else if (bh === 'right') {
-      badge.style.right     = '24px';
-      badge.style.left      = 'auto';
-      badge.style.transform = (bv === 'middle') ? 'translateY(-50%)' : 'none';
-    } else { // left
-      badge.style.left      = '24px';
-      badge.style.right     = 'auto';
-      badge.style.transform = (bv === 'middle') ? 'translateY(-50%)' : 'none';
-    }
-
-  } else {
-    // フロー内配置モード（bottom = デフォルト、タイトルの直上）
-    // ヘッダーが flex-column なので align-self で横位置を制御
-    badge.style.position    = 'relative';
-    badge.style.transform   = 'none';
-    badge.style.top = badge.style.bottom = badge.style.left = badge.style.right = 'auto';
-
-    if (bh === 'center') {
-      badge.style.alignSelf   = 'center';
-      badge.style.marginLeft  = 'auto';
-      badge.style.marginRight = 'auto';
-    } else if (bh === 'right') {
-      badge.style.alignSelf   = 'flex-end';
-      badge.style.marginLeft  = 'auto';
-      badge.style.marginRight = '0';
-    } else { // left
-      badge.style.alignSelf   = 'flex-start';
-      badge.style.marginLeft  = '0';
-      badge.style.marginRight = 'auto';
-    }
-  }
-}
-
-
+// ── エリア表示ラベル生成 ──
 function buildAreaLabel() {
   const pref   = cfg.area_pref   || cfg.prefecture || '';
   const city   = cfg.area_city   || cfg.city       || '';
@@ -1559,8 +1454,9 @@ function speakTTS(text, onEnd) {
   u.lang='ja-JP'; u.rate=0.88; u.pitch=1.0; u.volume=1.0;
   const v = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
   if (v) u.voice = v;
-  u.onerror = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
-  u.onend  = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
+  u.onend = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
+  u.onerror = () => { voicePlaying = false; updateArrivedButton(); };
+  if (onEnd) u.onend = () => { voicePlaying = false; updateArrivedButton(); onEnd(); };
   setVoiceLog('🔊', text);
   speechSynthesis.speak(u);
 }
