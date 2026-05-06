@@ -1201,6 +1201,7 @@ function startWalk(playStartAnnounce) {
   if (!playStartAnnounce) return;
 
   gpsLocked = true; // スタートアナウンス中はGPS到着判定をロック
+  updateArrivedButton(); // 即座にボタンを無効化（音声開始前から制限）
   setTimeout(() => {
     const startSpot = courseSpots[0];
     const specialActive = isSpecialActive();
@@ -1960,10 +1961,10 @@ function nextSpot() {
     ? `ゴールの${next.spot_name}へ向かいましょう。`
     : `次は${next.spot_name}です。`;
 
-  if (prevSpot.audio_next_url) {
-    console.log(`[audio_next] spot="${prevSpot.spot_name}" url="${prevSpot.audio_next_url}" fallback="${nextText}"`);
+  if (next.audio_next_url) {
+    console.log(`[audio_next] spot="${next.spot_name}" url="${next.audio_next_url}" fallback="${nextText}"`);
   }
-  setTimeout(() => playVoice(prevSpot.audio_next_url, nextText, () => { gpsLocked = false; }), 500);
+  setTimeout(() => playVoice(next.audio_next_url, nextText, () => { gpsLocked = false; }), 500);
 }
 
 // ══════════════════════════════════════
