@@ -2049,7 +2049,7 @@ function nextSpot() {
   if (navUrl) {
     console.log(`[audio_nav] isGoal=${isNextLast} spot="${prevSpot.spot_name}" url="${navUrl}" fallback="${nextText}"`);
   }
-  setTimeout(() => playVoice(navUrl, nextText, () => { gpsLocked = false; }), 500);
+  setTimeout(() => playVoice(navUrl, nextText, () => { gpsLocked = false; }, true), 500);
 }
 
 // ══════════════════════════════════════
