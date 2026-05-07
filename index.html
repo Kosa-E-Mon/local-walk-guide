@@ -767,6 +767,19 @@ function resolveHeaderImageSrc() {
   return resolveImageUrl(cfg.header_image_url) || resolveImageUrl(cfg.header_image_id);
 }
 
+function normalizeCourseType(type) {
+  const value = cleanConfigValue(type);
+  if (value === '市街地' || value === 'shigaichi') return '市街地';
+  if (value === '公園' || value === 'koen') return '公園';
+  if (value === '混在' || value === 'konzai') return '混在';
+  return value;
+}
+
+function getCourseType(course) {
+  if (!course) return '';
+  return normalizeCourseType(course.course_type || course.course_typ || course.type);
+}
+
 // ══════════════════════════════════════
 // データ
 // ══════════════════════════════════════
@@ -912,6 +925,7 @@ async function initApp() {
     // データ
     allCourses = parseCSV(coursesCSV).map(c => ({
       ...c,
+      course_type: getCourseType(c),
       display_order: parseInt(c.display_order) || 99,
       recommended: c.recommended === 'TRUE',
       duration_min: parseInt(c.duration_min) || 0,
@@ -1290,8 +1304,9 @@ function startWalk(playStartAnnounce) {
     function playThemeOrCaution(onDone) {
       const themeUrl  = currentCourse.audio_theme_url;
       const themeText = currentCourse.theme_text;
-      const caution    = getCaution(currentCourse.course_type);
-      const cautionUrl = getCautionUrl(currentCourse.course_type);
+      const courseType = getCourseType(currentCourse);
+      const caution    = getCaution(courseType);
+      const cautionUrl = getCautionUrl(courseType);
 
       if (themeUrl) {
         // テーマあり → cautionは一切流さない（MP3失敗時のTTSフォールバックもtheme_textのみ）
@@ -1319,6 +1334,7 @@ function startWalk(playStartAnnounce) {
 }
 
 function getCaution(type) {
+  type = normalizeCourseType(type);
   if (type === '市街地') return cfg.caution_shigaichi || '交通規則にしたがって歩いてください。歩きスマホにならないようご注意ください。';
   if (type === '公園')  return cfg.caution_koen      || '園内の段差や凹凸にお気をつけながら、景色をお楽しみください。';
   if (type === '混在')  return cfg.caution_konzai    || '交通規則にしたがって歩いてください。歩きスマホや足元にもご注意ください。';
@@ -1326,6 +1342,7 @@ function getCaution(type) {
 }
 
 function getCautionUrl(type) {
+  type = normalizeCourseType(type);
   if (type === '市街地') return cfg.caution_shigaichi_url || null;
   if (type === '公園')  return cfg.caution_koen_url      || null;
   if (type === '混在')  return cfg.caution_konzai_url    || null;
