@@ -496,7 +496,7 @@ body {
   <div class="home-header" id="home-header">
     <div class="home-header-bg"></div>
     <div class="home-header-overlay"></div>
-    <div class="home-badge">MACHI ARUKI GUIDE</div>
+  <div class="home-badge" id="home-badge">MACHI ARUKI GUIDE</div>
     <div class="home-title" id="home-title">まち歩き</div>
     <div class="home-subtitle" id="home-subtitle">コースを選んでください</div>
     <div class="home-area-name" id="home-area-name"></div>
@@ -741,6 +741,32 @@ function drivePhotoUrl(url) {
   return url;
 }
 
+function isTrueValue(value, def = false) {
+  if (value == null || value === '') return def;
+  return String(value).trim().toUpperCase() === 'TRUE';
+}
+
+function cleanConfigValue(value) {
+  return value == null ? '' : String(value).trim();
+}
+
+function isImageLikeUrl(url) {
+  const value = cleanConfigValue(url);
+  if (!value) return false;
+  if (/drive\.google\.com\/drive\/.*\/folders\//i.test(value)) return false;
+  return /^https?:\/\//i.test(value) || /^data:image\//i.test(value);
+}
+
+function resolveImageUrl(url) {
+  const value = cleanConfigValue(url);
+  if (!isImageLikeUrl(value)) return null;
+  return drivePhotoUrl(value) || value;
+}
+
+function resolveHeaderImageSrc() {
+  return resolveImageUrl(cfg.header_image_url) || resolveImageUrl(cfg.header_image_id);
+}
+
 // ══════════════════════════════════════
 // データ
 // ══════════════════════════════════════
@@ -950,26 +976,68 @@ function applyConfig() {
   document.getElementById('loading-logo').textContent = title;
   document.getElementById('home-title').textContent = title;
   if (cfg.app_subtitle) document.getElementById('home-subtitle').textContent = cfg.app_subtitle;
+  applyHomeBadgeStyle();
 
   // エリア表示（area_display で組み合わせを選択）
   const areaEl = document.getElementById('home-area-name');
   if (areaEl) areaEl.textContent = buildAreaLabel();
 
   // ヘッダー画像
-  const headerImgSrc = cfg.header_image_url
-    || (cfg.header_image_id ? (drivePhotoUrl(cfg.header_image_id) || cfg.header_image_id) : null);
-  if (cfg.header_type === 'image' && headerImgSrc) {
+  const headerImgSrc = resolveHeaderImageSrc();
+  const header = document.getElementById('home-header');
+  header.querySelectorAll('.home-header-img').forEach(el => el.remove());
+  const headerType = cleanConfigValue(cfg.header_type || 'color').toLowerCase();
+  if (headerType === 'image' && headerImgSrc) {
     const img = document.createElement('img');
     img.className = 'home-header-img';
-    img.src = headerImgSrc;
-    document.getElementById('home-header').prepend(img);
-    // header_style を画像ロード後に適用
+    img.alt = '';
+    img.decoding = 'async';
+    img.onerror = () => { img.remove(); console.warn('header image failed:', headerImgSrc); };
     img.onload = applyHeaderStyle;
+    img.src = headerImgSrc;
+    header.prepend(img);
+    // header_style を画像ロード後に適用
     applyHeaderStyle();
   }
 }
 
 // ── エリア表示ラベル生成 ──
+function applyHomeBadgeStyle() {
+  const badge = document.getElementById('home-badge');
+  if (!badge) return;
+
+  badge.textContent = cleanConfigValue(cfg.badge_text) || 'MACHI ARUKI GUIDE';
+  badge.style.display = isTrueValue(cfg.badge_visible, true) ? 'inline-block' : 'none';
+  badge.style.color = cleanConfigValue(cfg.badge_color) || '';
+  badge.style.background = cleanConfigValue(cfg.badge_bg) || '';
+  badge.style.borderColor = cleanConfigValue(cfg.badge_border) || '';
+  badge.style.fontSize = cleanConfigValue(cfg.badge_font_size) || '';
+  badge.style.opacity = cleanConfigValue(cfg.badge_opacity) || '';
+
+  const h = cleanConfigValue(cfg.badge_h || 'flow').toLowerCase();
+  const v = cleanConfigValue(cfg.badge_v || 'flow').toLowerCase();
+  const positioned = h !== 'flow' || v !== 'flow';
+  badge.style.position = positioned ? 'absolute' : 'relative';
+  badge.style.marginBottom = positioned ? '0' : '';
+  badge.style.left = badge.style.right = badge.style.top = badge.style.bottom = '';
+  badge.style.transform = '';
+
+  if (!positioned) return;
+
+  const isCenterX = h === 'center' || h === 'middle' || h === '中央' || h === '真ん中';
+  const isRight = h === 'right' || h === '右';
+  const isCenterY = v === 'center' || v === 'middle' || v === '中央' || v === '真ん中';
+  const isBottom = v === 'bottom' || v === '下';
+
+  if (isRight) badge.style.right = '24px';
+  else badge.style.left = isCenterX ? '50%' : '24px';
+
+  if (isBottom) badge.style.bottom = '24px';
+  else badge.style.top = isCenterY ? '50%' : '24px';
+
+  badge.style.transform = `${isCenterX ? 'translateX(-50%)' : ''} ${isCenterY ? 'translateY(-50%)' : ''}`.trim();
+}
+
 function buildAreaLabel() {
   const pref   = cfg.area_pref   || cfg.prefecture || '';
   const city   = cfg.area_city   || cfg.city       || '';
@@ -1201,7 +1269,6 @@ function startWalk(playStartAnnounce) {
   if (!playStartAnnounce) return;
 
   gpsLocked = true; // スタートアナウンス中はGPS到着判定をロック
-  updateArrivedButton(); // 即座にボタンを無効化（音声開始前から制限）
   setTimeout(() => {
     const startSpot = courseSpots[0];
     const specialActive = isSpecialActive();
@@ -1454,8 +1521,9 @@ function speakTTS(text, onEnd) {
   u.lang='ja-JP'; u.rate=0.88; u.pitch=1.0; u.volume=1.0;
   const v = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
   if (v) u.voice = v;
-  u.onerror = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
-  u.onend  = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
+  u.onend = () => { voicePlaying = false; updateArrivedButton(); if (onEnd) onEnd(); };
+  u.onerror = () => { voicePlaying = false; updateArrivedButton(); };
+  if (onEnd) u.onend = () => { voicePlaying = false; updateArrivedButton(); onEnd(); };
   setVoiceLog('🔊', text);
   speechSynthesis.speak(u);
 }
@@ -1960,10 +2028,10 @@ function nextSpot() {
     ? `ゴールの${next.spot_name}へ向かいましょう。`
     : `次は${next.spot_name}です。`;
 
-  if (next.audio_next_url) {
-    console.log(`[audio_next] spot="${next.spot_name}" url="${next.audio_next_url}" fallback="${nextText}"`);
+  if (prevSpot.audio_next_url) {
+    console.log(`[audio_next] spot="${prevSpot.spot_name}" url="${prevSpot.audio_next_url}" fallback="${nextText}"`);
   }
-  setTimeout(() => playVoice(next.audio_next_url, nextText, () => { gpsLocked = false; }), 500);
+  setTimeout(() => playVoice(prevSpot.audio_next_url, nextText, () => { gpsLocked = false; }), 500);
 }
 
 // ══════════════════════════════════════
