@@ -496,7 +496,7 @@ body {
   <div class="home-header" id="home-header">
     <div class="home-header-bg"></div>
     <div class="home-header-overlay"></div>
-    <div class="home-badge">MACHI ARUKI GUIDE</div>
+    <div class="home-badge" id="home-badge">MACHI ARUKI GUIDE</div>
     <div class="home-title" id="home-title">まち歩き</div>
     <div class="home-subtitle" id="home-subtitle">コースを選んでください</div>
     <div class="home-area-name" id="home-area-name"></div>
@@ -930,6 +930,7 @@ async function initApp() {
 // コンフィグ適用
 // ══════════════════════════════════════
 function applyConfig() {
+
   const r = document.documentElement;
   if (cfg.color_bg) r.style.setProperty('--bg', cfg.color_bg);
   if (cfg.color_paper) r.style.setProperty('--paper', cfg.color_paper);
@@ -940,6 +941,7 @@ function applyConfig() {
   if (cfg.color_border) r.style.setProperty('--border', cfg.color_border);
   if (cfg.font_title) r.style.setProperty('--font-title', `'${cfg.font_title}', serif`);
   if (cfg.font_body) r.style.setProperty('--font-body', `'${cfg.font_body}', sans-serif`);
+
   // 文字サイズ（configから上書き可能）
   if (cfg.font_size_base)    r.style.setProperty('--font-size-base',    cfg.font_size_base);
   if (cfg.font_size_heading) r.style.setProperty('--font-size-heading', cfg.font_size_heading);
@@ -951,6 +953,19 @@ function applyConfig() {
   document.getElementById('home-title').textContent = title;
   if (cfg.app_subtitle) document.getElementById('home-subtitle').textContent = cfg.app_subtitle;
 
+  // ホームバッジ
+  const badge = document.getElementById('home-badge');
+
+  if (badge) {
+    if (cfg.home_badge_text) badge.textContent = cfg.home_badge_text;
+    if (cfg.home_badge_font_size) badge.style.fontSize = cfg.home_badge_font_size;
+    if (cfg.home_badge_color) badge.style.color = cfg.home_badge_color;
+    if (cfg.home_badge_border_color) badge.style.borderColor = cfg.home_badge_border_color;
+    if (cfg.home_badge_border_width) badge.style.borderWidth = cfg.home_badge_border_width;
+    if (cfg.home_badge_border_radius) badge.style.borderRadius = cfg.home_badge_border_radius;
+    if (cfg.home_badge_border) badge.style.border = cfg.home_badge_border;
+  }
+
   // エリア表示（area_display で組み合わせを選択）
   const areaEl = document.getElementById('home-area-name');
   if (areaEl) areaEl.textContent = buildAreaLabel();
@@ -958,12 +973,12 @@ function applyConfig() {
   // ヘッダー画像
   const headerImgSrc = cfg.header_image_url
     || (cfg.header_image_id ? (drivePhotoUrl(cfg.header_image_id) || cfg.header_image_id) : null);
+
   if (cfg.header_type === 'image' && headerImgSrc) {
     const img = document.createElement('img');
     img.className = 'home-header-img';
     img.src = headerImgSrc;
     document.getElementById('home-header').prepend(img);
-    // header_style を画像ロード後に適用
     img.onload = applyHeaderStyle;
     applyHeaderStyle();
   }
