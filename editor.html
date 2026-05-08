@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>まち歩きガイド — データエディタ v3</title>
+<title>まち歩きガイド — データエディタ v4</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -254,7 +254,7 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 
 <!-- HEADER -->
 <header class="hdr">
-  <div class="logo"><div class="logo-ic">⛩</div>まち歩きエディタ</div>
+  <div class="logo"><div class="logo-ic">⛩</div>まち歩きエディタ <span style="font-size:10px;color:var(--dim);font-weight:400;">v4</span></div>
   <div class="hdr-sep"></div>
   <div class="hdr-field">
     <div class="hdr-lbl">スプレッドシートURL または ID</div>
@@ -467,20 +467,43 @@ const CONFIG_DEFS = [
   {sec:'🏷 アプリ基本設定'},
   {key:'app_title',    lbl:'アプリタイトル',       desc:'アプリのメインタイトル。例: 増田まち歩きガイド'},
   {key:'app_subtitle', lbl:'サブタイトル',          desc:'タイトル下に小さく表示。例: 重要伝統的建造物群保存地区'},
-  {key:'area_name',    lbl:'エリア名',              desc:'プライズの「どこで達成したか」に使用。例: 秋田県横手市増田町'},
+  {key:'area_name',    lbl:'エリア名（従来）',      desc:'プライズの「どこで達成したか」に使用。area_pref/city/town 未設定時のフォールバック'},
   {sec:'🎨 カラー設定'},
   {key:'color_bg',      lbl:'背景色',               desc:'画面全体の背景 (--bg)。例: #F4EFE4', type:'color'},
   {key:'color_paper',   lbl:'カード背景色',         desc:'カード・白い領域 (--paper)。例: #FAF7F1', type:'color'},
   {key:'color_ink',     lbl:'文字・暗背景色',       desc:'テキストやホーム画面の背景 (--ink)。例: #1C1A16', type:'color'},
   {key:'color_primary', lbl:'メインカラー',         desc:'ボタン・アクセント・スポット番号 (--primary)。例: #B83232', type:'color'},
   {key:'color_gold',    lbl:'ゴールドカラー',       desc:'プライズ・ゴール・装飾 (--gold)。例: #9A7A3A', type:'color'},
+  {key:'color_muted',   lbl:'ミュート色',           desc:'サブテキスト・補助情報 (--muted)。例: #7A7060', type:'color'},
+  {key:'color_border',  lbl:'ボーダー色',           desc:'罫線・区切り線 (--border)。例: #D4C9B0', type:'color'},
   {sec:'🔤 フォント設定'},
-  {key:'font_title', lbl:'タイトルフォント', desc:'見出し用フォント名。例: Noto Serif JP'},
-  {key:'font_body',  lbl:'本文フォント',    desc:'本文用フォント名。例: Noto Sans JP'},
+  {key:'font_title',         lbl:'タイトルフォント',     desc:'見出し用フォント名。例: Noto Serif JP'},
+  {key:'font_body',          lbl:'本文フォント',         desc:'本文用フォント名。例: Noto Sans JP'},
+  {key:'font_size_base',     lbl:'本文フォントサイズ',   desc:'--font-size-base の値。例: 14px'},
+  {key:'font_size_heading',  lbl:'見出しフォントサイズ', desc:'--font-size-heading の値。例: 20px'},
+  {key:'font_size_explain',  lbl:'解説フォントサイズ',   desc:'--font-size-explain の値。例: 14px'},
   {sec:'🖼 ヘッダー画像'},
-  {key:'header_type',      lbl:'ヘッダータイプ',           desc:'「image」で画像表示 / 「none」で非表示'},
-  {key:'header_image_url', lbl:'ヘッダー画像URL（優先）',  desc:'GitHub Pages等の直接URL（こちらが優先）'},
-  {key:'header_image_id',  lbl:'ヘッダー画像ID（旧式）',   desc:'Google DriveファイルID（/d/〇〇〇/ の部分）'},
+  {key:'header_type',      lbl:'ヘッダータイプ',            desc:'「image」で画像表示 / 「none」で非表示'},
+  {key:'header_style',     lbl:'ヘッダースタイル',          desc:'A: グラデ標準 / B: 写真ゾーン分離 / C: テキストシャドウ（デフォルト: A）'},
+  {key:'header_image_url', lbl:'ヘッダー画像URL（優先）',   desc:'GitHub Pages等の直接URL（こちらが優先）'},
+  {key:'header_image_id',  lbl:'ヘッダー画像ID（旧式）',    desc:'Google DriveファイルID（/d/〇〇〇/ の部分）'},
+  {sec:'🏷 ホームバッジ設定'},
+  {key:'home_badge_text',          lbl:'バッジテキスト',        desc:'ヘッダー内バッジに表示するテキスト。例: MACHI ARUKI GUIDE'},
+  {key:'home_badge_font_size',     lbl:'バッジフォントサイズ',  desc:'例: 9px'},
+  {key:'home_badge_color',         lbl:'バッジ文字色',          desc:'例: #B83232', type:'color'},
+  {key:'home_badge_border_color',  lbl:'バッジボーダー色',      desc:'例: #B83232', type:'color'},
+  {key:'home_badge_border_width',  lbl:'バッジボーダー幅',      desc:'例: 1px'},
+  {key:'home_badge_border_radius', lbl:'バッジ角丸',            desc:'例: 0px（デフォルト四角）'},
+  {key:'home_badge_border',        lbl:'バッジボーダー一括',    desc:'例: 1px solid #B83232（個別設定より優先）'},
+  {key:'home_badge_left',          lbl:'バッジ左位置',          desc:'例: 24px（デフォルト）'},
+  {key:'home_badge_right',         lbl:'バッジ右位置',          desc:'例: auto（デフォルト）'},
+  {key:'home_badge_top',           lbl:'バッジ上位置',          desc:'例: 40px（デフォルト）'},
+  {key:'home_badge_bottom',        lbl:'バッジ下位置',          desc:'例: auto（デフォルト）'},
+  {sec:'🗺 エリア表示設定'},
+  {key:'area_pref',    lbl:'都道府県',    desc:'例: 秋田県'},
+  {key:'area_city',    lbl:'市区町村',    desc:'例: 横手市'},
+  {key:'area_town',    lbl:'町名',        desc:'例: 増田町'},
+  {key:'area_display', lbl:'表示モード',  desc:'custom / pref / city / town / pref+city / pref+town / city+town / pref+city+town', type:'sel', opts:['custom','pref','city','town','pref+city','pref+town','city+town','pref+city+town']},
   {sec:'⚠ 注意アナウンス（省略可・デフォルト文あり）'},
   {key:'caution_shigaichi',     lbl:'市街地コース 注意テキスト',   desc:'コース開始時に読み上げる注意事項'},
   {key:'caution_koen',          lbl:'公園コース 注意テキスト',     desc:'コース開始時に読み上げる注意事項'},
@@ -494,6 +517,24 @@ const CONFIG_DEFS = [
   {key:'special_end_date',        lbl:'特別イベント終了日',        desc:'YYYY-MM-DD（空白=常時有効）'},
   {key:'audio_special_start_url', lbl:'特別スタート音声URL',       desc:'特別期間のスタート時に再生（全コース共通）', type:'audio'},
   {key:'audio_special_goal_url',  lbl:'特別ゴール音声URL',         desc:'特別期間のゴール到達時に再生（全コース共通）', type:'audio'},
+  {sec:'🏅 賞状（修了書）設定'},
+  {key:'cert_award_title', lbl:'修了証タイトル',     desc:'賞状の大見出し。例: 修了証　（デフォルト: 修了証）'},
+  {key:'cert_issuer',      lbl:'発行者名',            desc:'賞状の発行者欄。例: 増田町観光協会（area_nameがフォールバック）'},
+  {key:'cert_seal_text',   lbl:'印鑑テキスト',        desc:'印鑑（丸印）に表示するテキスト。例: 増田\n観光'},
+  {key:'cert_body_text',   lbl:'本文追加テキスト',    desc:'賞状本文に付け加えるテキスト。例: 今後もまち歩きをお楽しみください。'},
+  {key:'cert_title_font_family',     lbl:'賞状タイトルフォント',   desc:'--cert-title-font-family。例: Yuji Syuku'},
+  {key:'cert_title_font_size',       lbl:'賞状タイトルサイズ',     desc:'--cert-title-font-size。例: 32px'},
+  {key:'cert_title_letter_spacing',  lbl:'賞状タイトル字間',       desc:'--cert-title-letter-spacing。例: 0.3em'},
+  {key:'cert_seal_size',         lbl:'印鑑サイズ',         desc:'--cert-seal-size。例: 80px'},
+  {key:'cert_seal_border_color', lbl:'印鑑ボーダー色',     desc:'--cert-seal-border-color。例: #B83232', type:'color'},
+  {key:'cert_seal_border_width', lbl:'印鑑ボーダー幅',     desc:'--cert-seal-border-width。例: 2px'},
+  {key:'cert_seal_bg',           lbl:'印鑑背景色',         desc:'--cert-seal-bg。例: transparent', type:'color'},
+  {key:'cert_seal_font_family',  lbl:'印鑑フォント',       desc:'--cert-seal-font-family。例: Noto Serif JP'},
+  {key:'cert_seal_text_size',    lbl:'印鑑テキストサイズ', desc:'--cert-seal-text-size。例: 12px'},
+  {key:'cert_seal_text_color',   lbl:'印鑑テキスト色',     desc:'--cert-seal-text-color。例: #B83232', type:'color'},
+  {key:'cert_seal_line_height',  lbl:'印鑑行間',           desc:'--cert-seal-line-height。例: 1.5'},
+  {sec:'🧭 ナビ設定'},
+  {key:'next_lock_sec', lbl:'「次へ」ボタンロック秒数', desc:'到着時に「次へ」ボタンをロックする秒数（保険タイマー）。例: 30（0で無制限待機）'},
 ];
 
 const COURSE_FIELDS = [
@@ -508,6 +549,8 @@ const COURSE_FIELDS = [
   {key:'end_date',                lbl:'公開終了日',                   desc:'YYYY-MM-DD（空白=常時）'},
   {key:'audio_theme_url',         lbl:'テーマナレーション音声URL',    desc:'コース開始時に流れる音声', type:'audio'},
   {key:'theme_text',              lbl:'テーマナレーション テキスト',  desc:'音声がない場合に読み上げ'},
+  {key:'audio_finish_url',        lbl:'完走音声URL',                  desc:'ゴール到達時に流れる音声（なければTTS）', type:'audio'},
+  {key:'finish_text',             lbl:'完走テキスト',                 desc:'ゴール時に読み上げるテキスト（音声URLがない場合に使用）'},
 ];
 
 const SCHEMAS = {
@@ -521,6 +564,7 @@ const SCHEMAS = {
     {key:'audio_start_url',    lbl:'出発音声URL',             desc:'このスポットへ向かう時に流れる', w:220, type:'audio'},
     {key:'audio_approach_url', lbl:'接近音声URL',             desc:'近づいたときに流れる', w:220, type:'audio'},
     {key:'audio_arrive_url',   lbl:'到着音声URL',             desc:'到着時に流れる', w:220, type:'audio'},
+    {key:'audio_explain_url',  lbl:'解説音声URL',             desc:'到着後の解説（到着音声の次に再生）', w:220, type:'audio'},
     {key:'audio_next_url',     lbl:'次スポット誘導音声URL',   desc:'次スポットへ移動を促す', w:220, type:'audio'},
     {key:'audio_goal_url',     lbl:'ゴール音声URL',           desc:'最終スポット到着時に流れる', w:220, type:'audio'},
     {key:'description',        lbl:'説明テキスト',            desc:'到着画面に表示される説明文', w:260},
@@ -803,6 +847,16 @@ function renderConfig(){
       const row=document.createElement('div'); row.className='cfg-in-row';
       row.appendChild(inp); row.appendChild(mkPlayBtn(()=>inp.value,def.lbl));
       rc.appendChild(row);
+    } else if(def.type==='bool'){
+      const sel=document.createElement('select'); sel.className='cfg-in'; sel.style.marginTop='4px';
+      ['','TRUE','FALSE'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v||'—';if(cur===v)o.selected=true;sel.appendChild(o);});
+      sel.addEventListener('change',()=>{setCV(def.key,sel.value);const chg=sel.value!==orig;rc.classList.toggle('chg',chg);recChg('config',def.key,orig,sel.value);updateConfigPreview();});
+      rc.appendChild(sel);
+    } else if(def.type==='sel'&&def.opts){
+      const sel=document.createElement('select'); sel.className='cfg-in'; sel.style.marginTop='4px';
+      ['',...def.opts].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v||'—';if(cur===v)o.selected=true;sel.appendChild(o);});
+      sel.addEventListener('change',()=>{setCV(def.key,sel.value);const chg=sel.value!==orig;rc.classList.toggle('chg',chg);recChg('config',def.key,orig,sel.value);updateConfigPreview();});
+      rc.appendChild(sel);
     } else {
       rc.appendChild(inp);
     }
@@ -947,7 +1001,7 @@ function renderCourses(){
 
     COURSE_FIELDS.forEach(col=>{
       const f=document.createElement('div');
-      f.className='cc-field'+(col.key==='theme_text'?' full':'');
+      f.className='cc-field'+((['theme_text','finish_text'].includes(col.key))?' full':'');
       const lbl=document.createElement('div'); lbl.className='cc-field-lbl';
       lbl.innerHTML=`${col.lbl} <code>${col.key}</code>`;
       f.appendChild(lbl);
@@ -1061,7 +1115,7 @@ function renderSpotsList(courseId, container){
 }
 
 function addCourse(){
-  const newCourse={course_id:'course_'+(Date.now()),course_name:'新しいコース',course_type:'市街地',display_order:'99',recommended:'FALSE',duration_min:'30',distance_m:'1000',start_date:'',end_date:'',audio_theme_url:'',theme_text:''};
+  const newCourse={course_id:'course_'+(Date.now()),course_name:'新しいコース',course_type:'市街地',display_order:'99',recommended:'FALSE',duration_min:'30',distance_m:'1000',start_date:'',end_date:'',audio_theme_url:'',theme_text:'',audio_finish_url:'',finish_text:''};
   state.courses.push(newCourse);
   renderCourses();
   // Scroll to bottom
