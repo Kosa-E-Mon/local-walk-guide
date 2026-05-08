@@ -103,6 +103,61 @@ body {
 .home-section-label { font-size: 10px; color: rgba(250,247,241,.3); letter-spacing: .2em; text-transform: uppercase; margin-bottom: 8px; margin-top: 16px; }
 .home-section-label:first-child { margin-top: 0; }
 
+/* ══ ホーム画面 ライト／ダーク切替 ══ */
+#screen-home {
+  background: var(--home-bg, var(--ink));
+}
+
+.home-theme-toggle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--home-toggle-border, rgba(255,255,255,.18));
+  background: var(--home-toggle-bg, rgba(0,0,0,.25));
+  color: var(--home-toggle-color, #fff);
+  font-size: 16px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.home-theme-toggle:active {
+  opacity: .75;
+}
+
+.home-title,
+.course-card-name,
+.area-card-name {
+  color: var(--home-text, #FAF7F1);
+}
+
+.home-subtitle,
+.course-card-meta,
+.course-card-type,
+.home-section-label,
+.area-card-desc,
+.area-card-arrow,
+.cloud-login-hint,
+.cloud-status-text,
+.like-bar-text,
+.like-bar-val,
+.credit {
+  color: var(--home-subtext, rgba(250,247,241,.4));
+}
+
+.course-card {
+  background: var(--home-card-bg, rgba(255,255,255,.05));
+  border-color: var(--home-card-border, rgba(255,255,255,.08));
+}
+
+.area-card {
+  background: var(--home-card-bg, rgba(255,255,255,.04));
+  border-color: var(--home-card-border, rgba(255,255,255,.06));
+}
+
 /* コースカード */
 .course-card {
   background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
@@ -494,6 +549,7 @@ body {
 <!-- ② ホーム -->
 <div id="screen-home" class="screen">
   <div class="home-header" id="home-header">
+    <button class="home-theme-toggle" id="home-theme-toggle" onclick="toggleHomeTheme()" aria-label="ホームテーマ切替">🌙</button>
     <div class="home-header-bg"></div>
     <div class="home-header-overlay"></div>
     <div class="home-badge" id="home-badge">MACHI ARUKI GUIDE</div>
@@ -804,6 +860,67 @@ function updateLikeBar() {
   if (el) el.textContent = `${loadLifetimeWalk().toLocaleString()} いいね`;
 }
 
+// ── ホーム画面テーマ切替 ──
+function getHomeTheme() {
+  return localStorage.getItem('lwg_home_theme') || cfg.home_theme_default || 'dark';
+}
+
+function setHomeTheme(mode) {
+  localStorage.setItem('lwg_home_theme', mode);
+  applyHomeTheme(mode);
+}
+
+function toggleHomeTheme() {
+  const current = getHomeTheme();
+  const next = current === 'light' ? 'dark' : 'light';
+  setHomeTheme(next);
+}
+
+function applyHomeTheme(mode) {
+  const home = document.getElementById('screen-home');
+  if (!home) return;
+
+  const suffix = mode === 'light' ? '_light' : '_dark';
+
+  home.style.setProperty('--home-bg',
+    cfg['home_bg' + suffix] || (mode === 'light' ? '#F7F3EA' : '#1C1A16')
+  );
+
+  home.style.setProperty('--home-card-bg',
+    cfg['home_card_bg' + suffix] || (mode === 'light' ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.05)')
+  );
+
+  home.style.setProperty('--home-card-border',
+    cfg['home_card_border' + suffix] || (mode === 'light' ? 'rgba(28,26,22,.12)' : 'rgba(255,255,255,.08)')
+  );
+
+  home.style.setProperty('--home-text',
+    cfg['home_text' + suffix] || (mode === 'light' ? '#1C1A16' : '#FAF7F1')
+  );
+
+  home.style.setProperty('--home-subtext',
+    cfg['home_subtext' + suffix] || (mode === 'light' ? 'rgba(28,26,22,.55)' : 'rgba(250,247,241,.4)')
+  );
+
+  home.style.setProperty('--home-toggle-bg',
+    cfg['home_toggle_bg' + suffix] || (mode === 'light' ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.25)')
+  );
+
+  home.style.setProperty('--home-toggle-border',
+    cfg['home_toggle_border' + suffix] || (mode === 'light' ? 'rgba(28,26,22,.18)' : 'rgba(255,255,255,.18)')
+  );
+
+  home.style.setProperty('--home-toggle-color',
+    cfg['home_toggle_color' + suffix] || (mode === 'light' ? '#1C1A16' : '#FFFFFF')
+  );
+
+  const btn = document.getElementById('home-theme-toggle');
+  if (btn) {
+    btn.textContent = mode === 'light' ? '☀️' : '🌙';
+    btn.title = mode === 'light' ? 'ライトモード' : 'ダークモード';
+  }
+}
+
 function loadAreas() { return lsGet('lwg_areas', { home: null, favorites: [], visited: [] }); }
 function saveAreas(areas) { lsSet('lwg_areas', areas); }
 
@@ -982,6 +1099,8 @@ function applyConfig() {
     img.onload = applyHeaderStyle;
     applyHeaderStyle();
   }
+
+  applyHomeTheme(getHomeTheme());
 }
 
 // ── エリア表示ラベル生成 ──
