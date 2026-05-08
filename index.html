@@ -208,8 +208,6 @@ body {
 
 /* ホーム画面内の見えにくい文字をテーマ色に寄せる */
 #screen-home .home-section-label,
-#screen-home .home-subtitle,
-#screen-home .home-area-name,
 #screen-home .course-card-type,
 #screen-home .course-card-meta,
 #screen-home .course-card-period,
@@ -225,8 +223,7 @@ body {
 }
 
 #screen-home .course-card-name,
-#screen-home .area-card-name,
-#screen-home .home-title {
+#screen-home .area-card-name {
   color: var(--home-text, #FAF7F1);
 }
 
@@ -237,6 +234,19 @@ body {
 
 #screen-home .btn-prizes-home {
   border-color: var(--home-card-border, rgba(255,255,255,.15));
+}
+
+/* ヘッダー内のタイトル・サブタイトル・地域名はテーマ切替の影響を受けない */
+#screen-home .home-header .home-title {
+  color: #FAF7F1;
+}
+
+#screen-home .home-header .home-subtitle {
+  color: rgba(250,247,241,.35);
+}
+
+#screen-home .home-header .home-area-name {
+  color: rgba(250,247,241,.22);
 }
 
 /* ホームバッジの自由配置 */
