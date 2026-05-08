@@ -438,12 +438,17 @@ body {
 .cert-sho-seal {
   width: var(--cert-seal-size, 60px);
   height: var(--cert-seal-size, 60px);
+  border-radius: 50%;
   border-color: var(--cert-seal-border-color, #B83232);
   border-width: var(--cert-seal-border-width, 3px);
   border-style: double;
   background: var(--cert-seal-bg, rgba(184,50,50,.04));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
-background: rgba(184,50,50,.04); }
+
 .cert-sho-seal-text {
   font-family: var(--cert-seal-font-family, var(--font-title));
   font-size: var(--cert-seal-text-size, 10px);
