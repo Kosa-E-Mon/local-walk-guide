@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="まち歩き">
 <title>まち歩きガイド</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Kaisei+Decol:wght@400;700&family=Shippori+Mincho:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <!-- ══ Google Analytics 4 ══
@@ -405,7 +406,11 @@ body {
 .cert-sho-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
 .cert-sho-rule { flex: 1; height: 1px; background: linear-gradient(to right, transparent, #9A7A3A); }
 .cert-sho-rule.right { background: linear-gradient(to left, transparent, #9A7A3A); }
-.cert-sho-title { font-family: var(--font-title); font-size: 26px; font-weight: 700; color: #2A1A0A; letter-spacing: .35em; white-space: nowrap; }
+.cert-sho-title {
+  font-family: var(--cert-title-font-family, var(--font-title));
+  font-size: var(--cert-title-font-size, 26px);
+  letter-spacing: var(--cert-title-letter-spacing, .35em);
+}
 /* コース名 */
 .cert-sho-course-label { font-size: 9px; color: #9A7A3A; letter-spacing: .25em; text-align: center; margin-bottom: 4px; }
 .cert-sho-course { font-family: var(--font-title); font-size: 15px; font-weight: 700; color: #2A1A0A; text-align: center; border-bottom: 1px solid #D4C9B0; padding-bottom: 14px; margin-bottom: 14px; letter-spacing: .08em; line-height: 1.5; }
@@ -430,8 +435,21 @@ body {
 /* 発行者・印鑑フッター */
 .cert-sho-footer { display: flex; justify-content: flex-end; align-items: center; gap: 14px; padding-top: 10px; border-top: 1px solid #D4C9B0; margin-bottom: 20px; }
 .cert-sho-issuer { font-family: var(--font-title); font-size: 13px; color: #2A1A0A; letter-spacing: .08em; line-height: 1.7; text-align: right; }
-.cert-sho-seal { width: 60px; height: 60px; border-radius: 50%; border: 3px double #B83232; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(184,50,50,.04); }
-.cert-sho-seal-text { font-family: var(--font-title); font-size: 10px; font-weight: 700; color: #B83232; text-align: center; letter-spacing: .04em; line-height: 1.4; }
+.cert-sho-seal {
+  width: var(--cert-seal-size, 60px);
+  height: var(--cert-seal-size, 60px);
+  border-color: var(--cert-seal-border-color, #B83232);
+  border-width: var(--cert-seal-border-width, 3px);
+  border-style: double;
+  background: var(--cert-seal-bg, rgba(184,50,50,.04));
+}
+background: rgba(184,50,50,.04); }
+.cert-sho-seal-text {
+  font-family: var(--cert-seal-font-family, var(--font-title));
+  font-size: var(--cert-seal-text-size, 10px);
+  color: var(--cert-seal-text-color, #B83232);
+  line-height: var(--cert-seal-line-height, 1.4);
+}
 /* ボタン */
 .cert-sho-buttons { display: flex; flex-direction: column; gap: 8px; }
 .cert-sho-btn-primary { background: #9A7A3A; color: white; border: none; padding: 13px; font-family: var(--font-title); font-size: 13px; letter-spacing: .12em; border-radius: 4px; cursor: pointer; transition: opacity .2s; width: 100%; }
@@ -1110,6 +1128,42 @@ function applyConfig() {
   if (cfg.font_size_base)    r.style.setProperty('--font-size-base',    cfg.font_size_base);
   if (cfg.font_size_heading) r.style.setProperty('--font-size-heading', cfg.font_size_heading);
   if (cfg.font_size_explain) r.style.setProperty('--font-size-explain', cfg.font_size_explain);
+
+  // 証明書タイトル・印鑑デザイン（configから上書き可能）
+  if (cfg.cert_title_font_family) {
+    r.style.setProperty('--cert-title-font-family', cfg.cert_title_font_family);
+  }
+  if (cfg.cert_title_font_size) {
+    r.style.setProperty('--cert-title-font-size', cfg.cert_title_font_size);
+  }
+  if (cfg.cert_title_letter_spacing) {
+    r.style.setProperty('--cert-title-letter-spacing', cfg.cert_title_letter_spacing);
+  }
+
+  if (cfg.cert_seal_size) {
+    r.style.setProperty('--cert-seal-size', cfg.cert_seal_size);
+  }
+  if (cfg.cert_seal_border_color) {
+    r.style.setProperty('--cert-seal-border-color', cfg.cert_seal_border_color);
+  }
+  if (cfg.cert_seal_border_width) {
+    r.style.setProperty('--cert-seal-border-width', cfg.cert_seal_border_width);
+  }
+  if (cfg.cert_seal_bg) {
+    r.style.setProperty('--cert-seal-bg', cfg.cert_seal_bg);
+  }
+  if (cfg.cert_seal_font_family) {
+    r.style.setProperty('--cert-seal-font-family', cfg.cert_seal_font_family);
+  }
+  if (cfg.cert_seal_text_size) {
+    r.style.setProperty('--cert-seal-text-size', cfg.cert_seal_text_size);
+  }
+  if (cfg.cert_seal_text_color) {
+    r.style.setProperty('--cert-seal-text-color', cfg.cert_seal_text_color);
+  }
+  if (cfg.cert_seal_line_height) {
+    r.style.setProperty('--cert-seal-line-height', cfg.cert_seal_line_height);
+  }
 
   const title = cfg.app_title || 'まち歩き';
   document.title = title;
