@@ -438,17 +438,12 @@ body {
 .cert-sho-seal {
   width: var(--cert-seal-size, 60px);
   height: var(--cert-seal-size, 60px);
-  border-radius: 50%;
   border-color: var(--cert-seal-border-color, #B83232);
   border-width: var(--cert-seal-border-width, 3px);
   border-style: double;
   background: var(--cert-seal-bg, rgba(184,50,50,.04));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
-
+background: rgba(184,50,50,.04); }
 .cert-sho-seal-text {
   font-family: var(--cert-seal-font-family, var(--font-title));
   font-size: var(--cert-seal-text-size, 10px);
@@ -844,39 +839,23 @@ const DEFAULT_SHEET_ID = '1fugAECsnEQIHXgQh1qyPOaLJL-6wMuW0B4dA6Ac6k24';
 const MASUDA_SHEET_ID  = '1fugAECsnEQIHXgQh1qyPOaLJL-6wMuW0B4dA6Ac6k24';
 
 // DriveのURLを音声・ダウンロード用に変換
-function extractDriveId(url) {
-  if (!url) return null;
-  const s = String(url).trim();
-
-  // https://drive.google.com/file/d/FILE_ID/view
-  let m = s.match(/\/file\/d\/([^/]+)/);
-  if (m) return m[1];
-
-  // https://drive.google.com/open?id=FILE_ID / uc?id=FILE_ID
-  m = s.match(/[?&]id=([^&]+)/);
-  if (m && s.includes('drive.google.com')) return m[1];
-
-  // Google DriveのファイルIDだけを入れた場合にも対応
-  if (/^[a-zA-Z0-9_-]{20,}$/.test(s) && !s.includes('/') && !s.includes('.')) return s;
-
-  return null;
-}
-
 function driveUrl(url) {
   if (!url) return null;
-  const s = String(url).trim();
-  const id = extractDriveId(s);
-  if (id) return `https://drive.google.com/uc?export=download&id=${id}`;
-  return s;
+  const m = url.match(/\/file\/d\/([^/]+)/);
+  if (m) return `https://drive.google.com/uc?export=download&id=${m[1]}`;
+  if (url.includes('drive.google.com')) return url;
+  return url;
 }
 
 // DriveのURLを写真表示用（thumbnail）に変換
 function drivePhotoUrl(url) {
   if (!url) return null;
-  const s = String(url).trim();
-  const id = extractDriveId(s);
-  if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
-  return s;
+  const m = url.match(/\/file\/d\/([^/]+)/);
+  if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w800`;
+  const m2 = url.match(/[?&]id=([^&]+)/);
+  if (m2 && url.includes('drive.google.com')) return `https://drive.google.com/thumbnail?id=${m2[1]}&sz=w800`;
+  if (url.includes('drive.google.com')) return url;
+  return url;
 }
 
 // ══════════════════════════════════════
@@ -1194,26 +1173,20 @@ function applyConfig() {
 
   // ホームバッジ
   const badge = document.getElementById('home-badge');
-
+  
   if (badge) {
-    const badgeText        = cfg.home_badge_text || cfg.badge_text;
-    const badgeColor       = cfg.home_badge_color || cfg.home_badge_text_color || cfg.badge_color || cfg.badge_text_color;
-    const badgeBorderColor = cfg.home_badge_border_color || cfg.badge_border_color || badgeColor;
-    const badgeBgColor     = cfg.home_badge_bg_color || cfg.home_badge_background_color || cfg.badge_bg_color || cfg.badge_background_color;
-
-    if (badgeText) badge.textContent = badgeText;
-    if (cfg.home_badge_font_size || cfg.badge_font_size) badge.style.fontSize = cfg.home_badge_font_size || cfg.badge_font_size;
-    if (badgeColor) badge.style.color = badgeColor;
-    if (badgeBorderColor) badge.style.borderColor = badgeBorderColor;
-    if (badgeBgColor) badge.style.backgroundColor = badgeBgColor;
-    if (cfg.home_badge_border_width || cfg.badge_border_width) badge.style.borderWidth = cfg.home_badge_border_width || cfg.badge_border_width;
-    if (cfg.home_badge_border_radius || cfg.badge_border_radius) badge.style.borderRadius = cfg.home_badge_border_radius || cfg.badge_border_radius;
-    if (cfg.home_badge_border || cfg.badge_border) badge.style.border = cfg.home_badge_border || cfg.badge_border;
-
-    badge.style.left = cfg.home_badge_left || cfg.badge_left || '24px';
-    badge.style.right = cfg.home_badge_right || cfg.badge_right || 'auto';
-    badge.style.top = cfg.home_badge_top || cfg.badge_top || '40px';
-    badge.style.bottom = cfg.home_badge_bottom || cfg.badge_bottom || 'auto';
+    if (cfg.home_badge_text) badge.textContent = cfg.home_badge_text;
+    if (cfg.home_badge_font_size) badge.style.fontSize = cfg.home_badge_font_size;
+    if (cfg.home_badge_color) badge.style.color = cfg.home_badge_color;
+    if (cfg.home_badge_border_color) badge.style.borderColor = cfg.home_badge_border_color;
+    if (cfg.home_badge_border_width) badge.style.borderWidth = cfg.home_badge_border_width;
+    if (cfg.home_badge_border_radius) badge.style.borderRadius = cfg.home_badge_border_radius;
+    if (cfg.home_badge_border) badge.style.border = cfg.home_badge_border;
+  
+    badge.style.left = cfg.home_badge_left || '24px';
+    badge.style.right = cfg.home_badge_right || 'auto';
+    badge.style.top = cfg.home_badge_top || '40px';
+    badge.style.bottom = cfg.home_badge_bottom || 'auto';
   }
 
   // エリア表示（area_display で組み合わせを選択）
@@ -1221,23 +1194,15 @@ function applyConfig() {
   if (areaEl) areaEl.textContent = buildAreaLabel();
 
   // ヘッダー画像
-  const header = document.getElementById('home-header');
-  if (header) header.querySelectorAll('.home-header-img').forEach(el => el.remove());
+  const headerImgSrc = cfg.header_image_url
+    || (cfg.header_image_id ? (drivePhotoUrl(cfg.header_image_id) || cfg.header_image_id) : null);
 
-  const headerImgSrc = drivePhotoUrl(
-    cfg.header_image_url || cfg.header_image_id || cfg.home_header_image_url || cfg.home_header_image_id
-  );
-
-  const headerType = String(cfg.header_type || cfg.home_header_type || '').trim().toLowerCase();
-  const useHeaderImage = !!headerImgSrc && (!headerType || ['image', 'img', 'photo', '画像', '写真'].includes(headerType));
-
-  if (useHeaderImage && header) {
+  if (cfg.header_type === 'image' && headerImgSrc) {
     const img = document.createElement('img');
     img.className = 'home-header-img';
     img.src = headerImgSrc;
-    header.prepend(img);
+    document.getElementById('home-header').prepend(img);
     img.onload = applyHeaderStyle;
-    img.onerror = () => console.warn('header image failed:', headerImgSrc);
     applyHeaderStyle();
   }
 
@@ -1492,31 +1457,26 @@ function startWalk(playStartAnnounce) {
       }
     }
 
-    // ② テーマナレーション → caution → playStart
-    // 以前はテーマ音声/テーマ文があるとcautionをスキップしていたため、
-    // caution_shigaichi_url等を必ず通す流れに変更。
+    // ② テーマナレーション（なければ汎用caution）→ playStart へ
+    // audio_theme_url または theme_text があればテーマを流す（cautionはスキップ）。
+    // どちらもなければ汎用cautionにフォールバック。
     function playThemeOrCaution(onDone) {
       const themeUrl  = currentCourse.audio_theme_url;
       const themeText = currentCourse.theme_text;
       const caution    = getCaution(currentCourse.course_type);
       const cautionUrl = getCautionUrl(currentCourse.course_type);
 
-      function playCautionThenStart() {
-        if (cautionUrl) {
-          playVoice(cautionUrl, caution, () => setTimeout(onDone, 300), true);
-        } else if (caution) {
-          speakTTS(caution, () => setTimeout(onDone, 300));
-        } else {
-          onDone();
-        }
-      }
-
       if (themeUrl) {
-        playVoice(themeUrl, themeText || '', () => setTimeout(playCautionThenStart, 300), true);
+        // テーマあり → cautionは一切流さない（MP3失敗時のTTSフォールバックもtheme_textのみ）
+        playVoice(themeUrl, themeText || '', () => setTimeout(onDone, 300), true);
       } else if (themeText) {
-        speakTTS(themeText, () => setTimeout(playCautionThenStart, 300));
+        speakTTS(themeText, () => setTimeout(onDone, 300));
+      } else if (cautionUrl) {
+        playVoice(cautionUrl, caution, () => setTimeout(onDone, 300), true);
+      } else if (caution) {
+        speakTTS(caution, () => setTimeout(onDone, 300));
       } else {
-        playCautionThenStart();
+        onDone();
       }
     }
 
@@ -1532,24 +1492,16 @@ function startWalk(playStartAnnounce) {
 }
 
 function getCaution(type) {
-  const t = String(type || '').trim();
-  if (t === '市街地' || t === 'shigaichi' || t === 'city') return cfg.caution_shigaichi || cfg.caution_city || '交通規則にしたがって歩いてください。歩きスマホにならないようご注意ください。';
-  if (t === '公園' || t === 'koen' || t === 'park')  return cfg.caution_koen || cfg.caution_park || '園内の段差や凹凸にお気をつけながら、景色をお楽しみください。';
-  if (t === '混在' || t === 'konzai' || t === 'mixed')  return cfg.caution_konzai || cfg.caution_mixed || '交通規則にしたがって歩いてください。歩きスマホや足元にもご注意ください。';
+  if (type === '市街地') return cfg.caution_shigaichi || '交通規則にしたがって歩いてください。歩きスマホにならないようご注意ください。';
+  if (type === '公園')  return cfg.caution_koen      || '園内の段差や凹凸にお気をつけながら、景色をお楽しみください。';
+  if (type === '混在')  return cfg.caution_konzai    || '交通規則にしたがって歩いてください。歩きスマホや足元にもご注意ください。';
   return '';
 }
 
 function getCautionUrl(type) {
-  const t = String(type || '').trim();
-  if (t === '市街地' || t === 'shigaichi' || t === 'city') {
-    return cfg.caution_shigaichi_url || cfg.caution_city_url || null;
-  }
-  if (t === '公園' || t === 'koen' || t === 'park') {
-    return cfg.caution_koen_url || cfg.caution_park_url || null;
-  }
-  if (t === '混在' || t === 'konzai' || t === 'mixed') {
-    return cfg.caution_konzai_url || cfg.caution_mixed_url || null;
-  }
+  if (type === '市街地') return cfg.caution_shigaichi_url || null;
+  if (type === '公園')  return cfg.caution_koen_url      || null;
+  if (type === '混在')  return cfg.caution_konzai_url    || null;
   return null;
 }
 
