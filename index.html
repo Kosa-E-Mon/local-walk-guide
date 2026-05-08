@@ -238,6 +238,16 @@ body {
   border-color: var(--home-card-border, rgba(255,255,255,.15));
 }
 
+/* ホームバッジの自由配置 */
+#screen-home .home-badge {
+  position: absolute;
+  left: var(--home-badge-left, 24px);
+  right: var(--home-badge-right, auto);
+  top: var(--home-badge-top, 40px);
+  bottom: var(--home-badge-bottom, auto);
+  z-index: 4;
+}
+
 /* ══ NAV ══ */
 #screen-nav { background: var(--bg); }
 
@@ -1109,7 +1119,7 @@ function applyConfig() {
 
   // ホームバッジ
   const badge = document.getElementById('home-badge');
-
+  
   if (badge) {
     if (cfg.home_badge_text) badge.textContent = cfg.home_badge_text;
     if (cfg.home_badge_font_size) badge.style.fontSize = cfg.home_badge_font_size;
@@ -1118,6 +1128,11 @@ function applyConfig() {
     if (cfg.home_badge_border_width) badge.style.borderWidth = cfg.home_badge_border_width;
     if (cfg.home_badge_border_radius) badge.style.borderRadius = cfg.home_badge_border_radius;
     if (cfg.home_badge_border) badge.style.border = cfg.home_badge_border;
+  
+    badge.style.left = cfg.home_badge_left || '24px';
+    badge.style.right = cfg.home_badge_right || 'auto';
+    badge.style.top = cfg.home_badge_top || '40px';
+    badge.style.bottom = cfg.home_badge_bottom || 'auto';
   }
 
   // エリア表示（area_display で組み合わせを選択）
