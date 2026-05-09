@@ -1140,6 +1140,105 @@ function renderCertPreview(rp,c){
   rp.appendChild(phoneWrap);
 }
 
+function renderCertPreview(rp,c){
+  const phone=document.createElement('div'); phone.className='sim-phone';
+  phone.style.background='#2A2218';
+  const notch=document.createElement('div'); notch.className='sim-notch'; notch.style.background=c.ink;
+  const body=document.createElement('div');
+  body.style.cssText='height:100%;padding:24px 16px 40px;background:#2A2218;overflow:auto;display:flex;align-items:flex-start;justify-content:center;';
+
+  const cert=document.createElement('div');
+  cert.style.cssText='width:100%;background:#FBF5E8;position:relative;border:3px solid #9A7A3A;box-shadow:0 0 0 6px #FBF5E8,0 0 0 8px #9A7A3A,0 8px 32px rgba(0,0,0,.5);';
+  ['tl','tr','bl','br'].forEach(pos=>{
+    const corner=document.createElement('div');
+    const top=pos.includes('t')?'top:10px;':'bottom:10px;';
+    const side=pos.includes('l')?'left:10px;border-left:2px solid #C9A85C;':'right:10px;border-right:2px solid #C9A85C;';
+    const edge=pos.includes('t')?'border-top:2px solid #C9A85C;':'border-bottom:2px solid #C9A85C;';
+    corner.style.cssText=`position:absolute;width:24px;height:24px;${top}${side}${edge}`;
+    cert.appendChild(corner);
+  });
+
+  const inner=document.createElement('div');
+  inner.style.cssText='padding:28px 24px 32px;';
+  const titleRow=document.createElement('div');
+  titleRow.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:18px;';
+  const ruleL=document.createElement('div');
+  ruleL.style.cssText='flex:1;height:1px;background:linear-gradient(to right,transparent,#9A7A3A);';
+  const ruleR=document.createElement('div');
+  ruleR.style.cssText='flex:1;height:1px;background:linear-gradient(to left,transparent,#9A7A3A);';
+  const award=document.createElement('div');
+  award.textContent=getCfg('cert_award_title')||'修了証';
+  award.style.cssText=`font-family:'${getCfg('cert_title_font_family')||'serif'}';font-size:${getCfg('cert_title_font_size')||'26px'};letter-spacing:${getCfg('cert_title_letter_spacing')||'.35em'};font-weight:700;color:#2A1A0A;white-space:nowrap;`;
+  titleRow.appendChild(ruleL); titleRow.appendChild(award); titleRow.appendChild(ruleR);
+
+  const course=state.courses[0]||{};
+  const courseLabel=document.createElement('div');
+  courseLabel.textContent='コース';
+  courseLabel.style.cssText='font-size:9px;color:#9A7A3A;letter-spacing:.25em;text-align:center;margin-bottom:4px;';
+  const courseName=document.createElement('div');
+  courseName.textContent=course.course_name||'まち歩きコース';
+  courseName.style.cssText='font-size:15px;font-weight:700;color:#2A1A0A;text-align:center;border-bottom:1px solid #D4C9B0;padding-bottom:14px;margin-bottom:14px;letter-spacing:.08em;line-height:1.5;';
+  const text=document.createElement('div');
+  text.innerHTML='あなたは上記のまち歩きコースを<br>見事完走されましたことを<br>ここに証し、表彰いたします。';
+  text.style.cssText='font-size:13px;line-height:2.2;color:#3A2A1A;text-align:center;letter-spacing:.08em;margin-bottom:16px;';
+  const extra=document.createElement('div');
+  extra.textContent=getCfg('cert_body_text')||'';
+  extra.style.cssText='font-size:11px;color:#7A6A5A;text-align:center;line-height:1.9;margin-bottom:16px;letter-spacing:.04em;';
+
+  const spotRows=state.course_spots.filter(cs=>cs.course_id===course.course_id).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0));
+  const spots=spotRows.map(cs=>state.spots.find(s=>s.spot_id===cs.spot_id)).filter(Boolean).slice(0,6);
+  const spotsLabel=document.createElement('div');
+  spotsLabel.textContent='訪問スポット';
+  spotsLabel.style.cssText='font-size:9px;color:#9A7A3A;letter-spacing:.25em;text-align:center;margin-bottom:8px;border-top:1px solid #D4C9B0;padding-top:12px;';
+  const spotsGrid=document.createElement('div');
+  spotsGrid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-bottom:14px;';
+  (spots.length?spots:[{spot_name:'スポット1'},{spot_name:'スポット2'},{spot_name:'スポット3'}]).forEach((s,i)=>{
+    const item=document.createElement('div'); item.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px;';
+    const num=document.createElement('div'); num.textContent=String(i+1); num.style.cssText='width:22px;height:22px;border-radius:50%;background:#9A7A3A;color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;';
+    const nm=document.createElement('div'); nm.textContent=s.spot_name||s.spot_id||'スポット'; nm.style.cssText='font-size:9px;color:#3A2A1A;text-align:center;line-height:1.3;max-width:72px;';
+    item.appendChild(num); item.appendChild(nm); spotsGrid.appendChild(item);
+  });
+
+  const stats=document.createElement('div');
+  stats.style.cssText='display:flex;justify-content:center;align-items:center;border:1px solid #D4C9B0;border-radius:4px;overflow:hidden;margin-bottom:14px;';
+  [
+    {v:course.distance_m||'0',u:'m',l:'歩行距離'},
+    {v:'0',u:'いいね',l:'今回の獲得'},
+    {v:String(spots.length||3),u:'箇所',l:'訪問スポット'},
+  ].forEach((st,i)=>{
+    const cell=document.createElement('div'); cell.style.cssText=`flex:1;text-align:center;padding:8px 4px;${i?'border-left:1px solid #D4C9B0;':''}`;
+    cell.innerHTML=`<div><span style="font-size:18px;font-weight:700;color:#9A7A3A;">${st.v}</span><span style="font-size:10px;color:#7A6A5A;margin-left:1px;">${st.u}</span></div><div style="font-size:9px;color:#9A7A5A;letter-spacing:.08em;margin-top:1px;">${st.l}</div>`;
+    stats.appendChild(cell);
+  });
+
+  const date=document.createElement('div');
+  date.textContent=new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
+  date.style.cssText='font-size:11px;color:#7A6A5A;text-align:center;letter-spacing:.15em;margin-bottom:18px;';
+  const issuer=document.createElement('div');
+  issuer.textContent=getCfg('cert_issuer')||getCfg('area_name')||c.title;
+  issuer.style.cssText='font-size:13px;color:#2A1A0A;letter-spacing:.08em;line-height:1.7;text-align:right;';
+  const seal=document.createElement('div');
+  seal.textContent=getCfg('cert_seal_text')||'修了';
+  seal.style.cssText=`width:${getCfg('cert_seal_size')||'60px'};height:${getCfg('cert_seal_size')||'60px'};border-radius:50%;border:${getCfg('cert_seal_border_width')||'3px'} double ${getCfg('cert_seal_border_color')||c.primary};background:${getCfg('cert_seal_bg')||'rgba(184,50,50,.04)'};color:${getCfg('cert_seal_text_color')||c.primary};font-family:'${getCfg('cert_seal_font_family')||'serif'}';font-size:${getCfg('cert_seal_text_size')||'10px'};line-height:${getCfg('cert_seal_line_height')||'1.4'};display:flex;align-items:center;justify-content:center;text-align:center;white-space:pre-line;`;
+  const footer=document.createElement('div');
+  footer.style.cssText='display:flex;justify-content:flex-end;align-items:center;gap:14px;padding-top:10px;border-top:1px solid #D4C9B0;margin-bottom:20px;';
+  footer.appendChild(issuer); footer.appendChild(seal);
+  const note=document.createElement('div');
+  note.textContent='スクリーンショットで記念に保存できます';
+  note.style.cssText='font-size:10px;color:#B8A890;text-align:center;margin-bottom:10px;letter-spacing:.06em;';
+  const btn=document.createElement('div');
+  btn.textContent='プライズを確認する';
+  btn.style.cssText='background:#9A7A3A;color:white;padding:12px;border-radius:4px;text-align:center;font-size:12px;letter-spacing:.12em;';
+
+  inner.appendChild(titleRow); inner.appendChild(courseLabel); inner.appendChild(courseName); inner.appendChild(text); inner.appendChild(extra); inner.appendChild(spotsLabel); inner.appendChild(spotsGrid); inner.appendChild(stats); inner.appendChild(date); inner.appendChild(footer); inner.appendChild(note); inner.appendChild(btn);
+  cert.appendChild(inner); body.appendChild(cert); phone.appendChild(notch); phone.appendChild(body);
+  const phoneWrap=document.createElement('div');
+  phoneWrap.className='sim-phone-wrap';
+  applySimZoom(phoneWrap);
+  phoneWrap.appendChild(phone);
+  rp.appendChild(phoneWrap);
+}
+
 function updateConfigPreview(){
   if(currentTab!=='config') return;
   const ink=getCfg('color_ink')||'#1C1A16';
@@ -1187,6 +1286,7 @@ function updateConfigPreview(){
     const img=document.createElement('img'); img.className='sim-hdr-img';
     const m=headerImg.match(/\/file\/d\/([^/]+)/);
     img.src=m?`https://drive.google.com/thumbnail?id=${m[1]}&sz=w400`:headerImg;
+    if(isLight) img.style.opacity='1';
     img.onerror=()=>img.style.display='none';
     hdr.appendChild(img);
   }
