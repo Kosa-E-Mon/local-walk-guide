@@ -295,6 +295,34 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 .font-picker-sel{width:100%;background:var(--raised);border:1.5px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:5px 9px;outline:none;cursor:pointer;}
 .font-picker-sel:focus{border-color:var(--accent);}
 .font-preview{font-size:12px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* v4.1 layout fixes */
+:root{--editor-font-size:13px;}
+.hdr{height:auto;min-height:56px;flex-wrap:wrap;align-content:center;padding:7px 14px;overflow:visible;}
+.hdr-field{min-width:0;}
+.hdr-in{width:clamp(180px,22vw,300px);}
+.hdr .spacer{min-width:12px;}
+.main{min-height:0;}
+.ed-body{min-height:0;scrollbar-gutter:stable;}
+.cfg-split{width:min(100%,740px);max-width:740px;grid-template-columns:minmax(170px,.82fr) minmax(220px,1fr);overflow:auto;scrollbar-gutter:stable;}
+.cfg-sec-h{padding:5px 10px;}
+.cfg-row{padding:7px 10px;min-height:48px;}
+.cfg-kl{font-size:calc(var(--editor-font-size) - 1px);}
+.cfg-kd{font-size:calc(var(--editor-font-size) - 4px);}
+.cfg-saved-val{overflow:auto;text-overflow:clip;scrollbar-width:thin;}
+.cfg-in,.c-in,.cc-field-in,.spot-sel,.font-picker-sel{font-size:calc(var(--editor-font-size) - 2px);}
+.ed-bar-title,.rp-title,.banner,.chg-panel-title,.cc-name{font-size:calc(var(--editor-font-size) - 1px);}
+.btn,.nav-it,.add-row-btn{font-size:calc(var(--editor-font-size) - 1px);}
+table.dt{font-size:calc(var(--editor-font-size) - 2px);}
+#rp-config{align-items:flex-start;justify-content:flex-start;overflow:auto;cursor:grab;scrollbar-gutter:stable;background:var(--bg);}
+#rp-config.dragging{cursor:grabbing;user-select:none;}
+.sim-phone-wrap{width:max(100%,calc(220px * var(--sim-zoom,1) + 40px));height:max(100%,calc(460px * var(--sim-zoom,1) + 40px));min-width:calc(220px * var(--sim-zoom,1) + 40px);min-height:calc(460px * var(--sim-zoom,1) + 40px);display:flex;align-items:center;justify-content:center;transform-origin:center center;}
+@media (max-width:1100px){
+  .logo{width:100%;}
+  .hdr .spacer{display:none;}
+  .hdr-sep{display:none;}
+  .right-panel{width:320px;}
+}
 </style>
 </head>
 <body>
@@ -1077,7 +1105,7 @@ function updateConfigPreview(){
 
   const phoneWrap = document.createElement('div');
   phoneWrap.className = 'sim-phone-wrap';
-  phoneWrap.style.transform = `scale(${simZoom})`;
+  applySimZoom(phoneWrap);
   phoneWrap.appendChild(phone);
   rp.appendChild(phoneWrap);
 
@@ -1583,6 +1611,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('gas-code-display').textContent=GAS_CODE;
   initResizeHandle();
   initEditorSize();
+  initPreviewPan();
 });
 document.getElementById('gas-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeGasModal();});
 document.getElementById('diff-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDiffModal();});
@@ -1642,14 +1671,55 @@ function initResizeHandle(){
 // ①: PREVIEW ZOOM
 // ═══════════════════════════════════════════════════════
 let simZoom = 1.0;
+const SIM_PHONE_W = 220;
+const SIM_PHONE_H = 460;
 
 function changeZoom(delta){
   simZoom = Math.min(2.0, Math.max(0.5, simZoom + delta));
   simZoom = Math.round(simZoom * 10) / 10;
-  document.getElementById('zoom-val').textContent = Math.round(simZoom * 100) + '%';
-  const wrap = document.querySelector('.sim-phone-wrap');
-  if(wrap) wrap.style.transform = `scale(${simZoom})`;
+  applySimZoom();
   localStorage.setItem('lwg_sim_zoom', simZoom);
+}
+
+function applySimZoom(wrap){
+  wrap = wrap || document.querySelector('.sim-phone-wrap');
+  document.getElementById('zoom-val').textContent = Math.round(simZoom * 100) + '%';
+  if(!wrap) return;
+  wrap.style.setProperty('--sim-zoom', simZoom);
+  wrap.style.transform = `scale(${simZoom})`;
+  wrap.style.width = `max(100%, ${SIM_PHONE_W * simZoom + 40}px)`;
+  wrap.style.height = `max(100%, ${SIM_PHONE_H * simZoom + 40}px)`;
+  wrap.style.minWidth = `${SIM_PHONE_W * simZoom + 40}px`;
+  wrap.style.minHeight = `${SIM_PHONE_H * simZoom + 40}px`;
+}
+
+function initPreviewPan(){
+  const panel = document.getElementById('rp-config');
+  if(!panel) return;
+  const savedZoom = parseFloat(localStorage.getItem('lwg_sim_zoom'));
+  if(savedZoom) simZoom = Math.min(2.0, Math.max(0.5, Math.round(savedZoom * 10) / 10));
+  applySimZoom();
+
+  let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+  panel.addEventListener('mousedown', e=>{
+    if(e.button !== 0) return;
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = panel.scrollLeft;
+    startTop = panel.scrollTop;
+    panel.classList.add('dragging');
+  });
+  document.addEventListener('mousemove', e=>{
+    if(!dragging) return;
+    panel.scrollLeft = startLeft - (e.clientX - startX);
+    panel.scrollTop = startTop - (e.clientY - startY);
+  });
+  document.addEventListener('mouseup', ()=>{
+    if(!dragging) return;
+    dragging = false;
+    panel.classList.remove('dragging');
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1793,7 +1863,9 @@ function normalizePxValue(key, val){
 const SIZE_MAP = {s:'13px', m:'15px', l:'17px'};
 
 function setEditorSize(sz){
-  document.body.style.fontSize = SIZE_MAP[sz] || '13px';
+  const size = SIZE_MAP[sz] || '13px';
+  document.documentElement.style.setProperty('--editor-font-size', size);
+  document.body.style.fontSize = size;
   ['sz-s','sz-m','sz-l'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
   document.getElementById('sz-'+sz)?.classList.add('active');
   localStorage.setItem('lwg_editor_size', sz);
