@@ -248,13 +248,60 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 ::-webkit-scrollbar{width:6px;height:6px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* ══ RESIZE HANDLE ══ */
+.resize-handle{width:5px;background:var(--border);cursor:col-resize;flex-shrink:0;transition:background .15s;position:relative;z-index:10;}
+.resize-handle:hover,.resize-handle.dragging{background:var(--accent);}
+.resize-handle::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:1px;height:40px;background:currentColor;opacity:.3;border-radius:1px;}
+
+/* ══ PREVIEW ZOOM ══ */
+.sim-zoom-wrap{display:flex;align-items:center;gap:4px;}
+.sim-zoom-btn{background:var(--raised);border:1px solid var(--border);color:var(--muted);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .12s;line-height:1;}
+.sim-zoom-btn:hover{border-color:var(--accent);color:var(--accent);}
+.sim-zoom-val{font-size:10px;color:var(--dim);font-family:var(--mono);min-width:30px;text-align:center;}
+#rp-config{transition:background .2s;}
+.sim-phone-wrap{display:flex;align-items:center;justify-content:center;width:100%;height:100%;}
+
+/* ══ FLASH ANIMATION ══ */
+@keyframes flashPulse{0%{outline:3px solid var(--accent);outline-offset:2px;opacity:.7}50%{outline:5px solid var(--accent);outline-offset:3px;opacity:1}100%{outline:0px solid transparent;outline-offset:0;opacity:1}}
+.sim-flash{animation:flashPulse .7s ease forwards;}
+
+/* ══ LABEL OVERLAY ══ */
+.sim-label-tag{position:absolute;background:rgba(184,50,50,.92);color:white;font-size:7px;font-family:var(--mono);padding:1px 5px;border-radius:3px;z-index:20;pointer-events:none;white-space:nowrap;letter-spacing:.02em;}
+.btn-lbl-toggle{padding:3px 8px;font-size:10px;border-radius:4px;border:1px solid var(--border2);background:var(--raised);color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap;}
+.btn-lbl-toggle.active{background:var(--accent);border-color:var(--accent);color:white;}
+
+/* ══ DIFF MODAL ══ */
+.diff-modal{background:var(--surface);border-radius:10px;width:680px;max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--sh-lg);overflow:hidden;}
+.diff-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--raised);}
+.diff-title{font-size:14px;font-weight:600;}
+.diff-body{flex:1;overflow-y:auto;padding:16px;}
+.diff-table{width:100%;border-collapse:collapse;font-size:11px;}
+.diff-table th{padding:6px 12px;background:var(--raised);border:1px solid var(--border);font-size:10px;color:var(--muted);text-align:left;font-weight:600;}
+.diff-table td{padding:7px 12px;border:1px solid var(--border);vertical-align:top;}
+.diff-table tr:hover td{background:var(--bg);}
+.diff-key{font-family:var(--mono);font-size:10px;color:var(--gold);}
+.diff-old{color:var(--accent);text-decoration:line-through;font-family:var(--mono);font-size:11px;}
+.diff-new{color:var(--green);font-family:var(--mono);font-size:11px;font-weight:600;}
+.diff-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;background:var(--raised);}
+
+/* ══ EDITOR SIZE TOGGLE ══ */
+.size-toggle{display:flex;align-items:center;gap:3px;background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:2px;}
+.size-btn{padding:3px 8px;border-radius:4px;font-size:10px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap;}
+.size-btn.active{background:var(--surface);color:var(--text);font-weight:600;box-shadow:var(--sh);}
+
+/* ══ FONT PICKER ══ */
+.font-picker-wrap{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
+.font-picker-sel{width:100%;background:var(--raised);border:1.5px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:5px 9px;outline:none;cursor:pointer;}
+.font-picker-sel:focus{border-color:var(--accent);}
+.font-preview{font-size:12px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
 <header class="hdr">
-  <div class="logo"><div class="logo-ic">⛩</div>まち歩きエディタ <span style="font-size:10px;color:var(--dim);font-weight:400;">v4</span></div>
+  <div class="logo"><div class="logo-ic">🗺</div>まち歩きエディタ <span style="font-size:10px;color:var(--dim);font-weight:400;">v4</span></div>
   <div class="hdr-sep"></div>
   <div class="hdr-field">
     <div class="hdr-lbl">スプレッドシートURL または ID</div>
@@ -269,6 +316,15 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
   <button class="btn btn-o btn-sm" onclick="testGas()">接続テスト</button>
   <button class="btn btn-blue btn-sm" onclick="showGasModal()">📋 GAS設定方法</button>
   <div class="spacer"></div>
+  <div class="hdr-field" style="align-items:flex-end;">
+    <div class="hdr-lbl">表示サイズ</div>
+    <div class="size-toggle">
+      <button class="size-btn active" id="sz-s" onclick="setEditorSize('s')">標準</button>
+      <button class="size-btn" id="sz-m" onclick="setEditorSize('m')">大</button>
+      <button class="size-btn" id="sz-l" onclick="setEditorSize('l')">特大</button>
+    </div>
+  </div>
+  <div class="hdr-sep"></div>
   <button class="btn btn-gold btn-sm" onclick="exportAll()">⬇ 全CSV保存</button>
 </header>
 
@@ -317,10 +373,17 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
   </div>
 
   <!-- RIGHT PANEL -->
-  <div class="right-panel">
+  <div class="resize-handle" id="resize-handle" title="ドラッグで幅調整 / ダブルクリックでリセット"></div>
+  <div class="right-panel" id="right-panel">
     <div class="rp-bar">
       <span class="rp-title" id="rp-title">📱 ライブプレビュー</span>
       <div class="spacer"></div>
+      <div class="sim-zoom-wrap" id="zoom-controls" style="display:none;">
+        <button class="sim-zoom-btn" onclick="changeZoom(-0.1)" title="縮小">－</button>
+        <span class="sim-zoom-val" id="zoom-val">100%</span>
+        <button class="sim-zoom-btn" onclick="changeZoom(0.1)" title="拡大">＋</button>
+      </div>
+      <button class="btn-lbl-toggle" id="btn-lbl-toggle" onclick="toggleLabelOverlay()" style="display:none;" title="設定キーの場所を表示">🏷 ラベル</button>
       <button class="btn-ico btn-sm" onclick="refreshRightPanel()" title="更新">↺</button>
     </div>
     <div class="rp-content">
@@ -389,6 +452,31 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 
 <div class="ld-mask" id="ld-mask"><div class="spinner"></div><div style="font-size:12px;color:var(--muted);" id="ld-txt">読み込み中…</div></div>
 <div class="notif" id="notif"></div>
+
+<!-- DIFF CONFIRM MODAL -->
+<div class="modal-bg" id="diff-modal">
+  <div class="diff-modal">
+    <div class="diff-hdr">
+      <span style="font-size:18px;">📋</span>
+      <div>
+        <div class="diff-title">変更内容の確認</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">以下の変更を保存します。内容を確認してください。</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-o btn-sm" onclick="closeDiffModal()">✕ キャンセル</button>
+    </div>
+    <div class="diff-body">
+      <table class="diff-table">
+        <thead><tr><th>項目</th><th style="min-width:160px;">変更前</th><th style="min-width:160px;">変更後</th></tr></thead>
+        <tbody id="diff-tbody"></tbody>
+      </table>
+    </div>
+    <div class="diff-footer">
+      <button class="btn btn-o" onclick="closeDiffModal()">キャンセル</button>
+      <button class="btn btn-g" id="diff-confirm-btn">💾 この内容で保存する</button>
+    </div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -538,13 +626,13 @@ const CONFIG_DEFS = [
 ];
 
 const COURSE_FIELDS = [
-  {key:'course_id',               lbl:'コースID',                     desc:'一意の識別子（英数字）', w:150},
-  {key:'course_name',             lbl:'コース名',                     desc:'画面に表示される名前', w:160},
+  {key:'course_id',               lbl:'コースID',                     desc:'一意の識別子（英数字）', w:140},
+  {key:'course_name',             lbl:'コース名',                     desc:'画面に表示される名前', w:150},
   {key:'course_type',             lbl:'コースタイプ',                 desc:'注意アナウンスの種別', w:80, type:'sel', opts:['市街地','公園','混在']},
-  {key:'display_order',           lbl:'表示順',                       desc:'数値が小さいほど上', w:55, type:'num'},
-  {key:'recommended',             lbl:'おすすめ★',                   desc:'TRUEで★おすすめ表示', w:75, type:'bool'},
-  {key:'duration_min',            lbl:'所要時間（分）',               desc:'目安の所要時間', w:80, type:'num'},
-  {key:'distance_m',              lbl:'距離（m）',                    desc:'コース全長の目安', w:70, type:'num'},
+  {key:'display_order',           lbl:'表示順',                       desc:'数値が小さいほど上', w:45, type:'num'},
+  {key:'recommended',             lbl:'おすすめ★',                   desc:'TRUEで★おすすめ表示', w:70, type:'bool'},
+  {key:'duration_min',            lbl:'所要時間（分）',               desc:'目安の所要時間', w:65, type:'num'},
+  {key:'distance_m',              lbl:'距離（m）',                    desc:'コース全長の目安', w:60, type:'num'},
   {key:'start_date',              lbl:'公開開始日',                   desc:'YYYY-MM-DD（空白=常時）'},
   {key:'end_date',                lbl:'公開終了日',                   desc:'YYYY-MM-DD（空白=常時）'},
   {key:'audio_theme_url',         lbl:'テーマナレーション音声URL',    desc:'コース開始時に流れる音声', type:'audio'},
@@ -555,32 +643,32 @@ const COURSE_FIELDS = [
 
 const SCHEMAS = {
   spots:[
-    {key:'spot_id',            lbl:'スポットID',              desc:'一意の識別子（英数字）', w:150},
-    {key:'spot_name',          lbl:'スポット名',              desc:'画面・音声に使われる名称', w:160},
-    {key:'lat',                lbl:'緯度',                    desc:'例: 39.319826', w:115},
-    {key:'lng',                lbl:'経度',                    desc:'例: 140.523891', w:115},
-    {key:'approach_dist',      lbl:'接近距離（m）',           desc:'この距離以内で「まもなく」を再生', w:95, type:'num'},
-    {key:'arrive_dist',        lbl:'到着判定距離（m）',       desc:'この距離以内で到着と判定（建物の外側になるよう設定）', w:110, type:'num'},
-    {key:'audio_start_url',    lbl:'出発音声URL',             desc:'このスポットへ向かう時に流れる', w:220, type:'audio'},
-    {key:'audio_approach_url', lbl:'接近音声URL',             desc:'近づいたときに流れる', w:220, type:'audio'},
-    {key:'audio_arrive_url',   lbl:'到着音声URL',             desc:'到着時に流れる', w:220, type:'audio'},
-    {key:'audio_explain_url',  lbl:'解説音声URL',             desc:'到着後の解説（到着音声の次に再生）', w:220, type:'audio'},
-    {key:'audio_next_url',     lbl:'次スポット誘導音声URL',   desc:'次スポットへ移動を促す', w:220, type:'audio'},
-    {key:'audio_goal_url',     lbl:'ゴール音声URL',           desc:'最終スポット到着時に流れる', w:220, type:'audio'},
-    {key:'description',        lbl:'説明テキスト',            desc:'到着画面に表示される説明文', w:260},
-    {key:'keywords',           lbl:'キーワード',              desc:'カンマ区切り。例: 江戸時代,内蔵', w:170},
-    {key:'photo_url',          lbl:'写真URL',                 desc:'Google DriveのURLまたは直接URL', w:220},
+    {key:'spot_id',            lbl:'スポットID',              desc:'一意の識別子（英数字）', w:140},
+    {key:'spot_name',          lbl:'スポット名',              desc:'画面・音声に使われる名称', w:150},
+    {key:'lat',                lbl:'緯度',                    desc:'例: 39.319826', w:95},
+    {key:'lng',                lbl:'経度',                    desc:'例: 140.523891', w:95},
+    {key:'approach_dist',      lbl:'接近距離（m）',           desc:'この距離以内で「まもなく」を再生', w:70, type:'num'},
+    {key:'arrive_dist',        lbl:'到着判定距離（m）',       desc:'この距離以内で到着と判定', w:75, type:'num'},
+    {key:'audio_start_url',    lbl:'出発音声URL',             desc:'このスポットへ向かう時に流れる', w:210, type:'audio'},
+    {key:'audio_approach_url', lbl:'接近音声URL',             desc:'近づいたときに流れる', w:210, type:'audio'},
+    {key:'audio_arrive_url',   lbl:'到着音声URL',             desc:'到着時に流れる', w:210, type:'audio'},
+    {key:'audio_explain_url',  lbl:'解説音声URL',             desc:'到着後の解説（到着音声の次に再生）', w:210, type:'audio'},
+    {key:'audio_next_url',     lbl:'次スポット誘導音声URL',   desc:'次スポットへ移動を促す', w:210, type:'audio'},
+    {key:'audio_goal_url',     lbl:'ゴール音声URL',           desc:'最終スポット到着時に流れる', w:210, type:'audio'},
+    {key:'description',        lbl:'説明テキスト',            desc:'到着画面に表示される説明文', w:250},
+    {key:'keywords',           lbl:'キーワード',              desc:'カンマ区切り。例: 江戸時代,内蔵', w:150},
+    {key:'photo_url',          lbl:'写真URL',                 desc:'Google DriveのURLまたは直接URL', w:210},
   ],
   facilities:[
-    {key:'facility_id',   lbl:'施設ID',              desc:'一意の識別子（英数字）', w:150},
-    {key:'facility_name', lbl:'施設名',              desc:'トースト通知に表示される名称', w:160},
-    {key:'lat',           lbl:'緯度',                desc:'施設の緯度', w:115},
-    {key:'lng',           lbl:'経度',                desc:'施設の経度', w:115},
-    {key:'trigger_dist',  lbl:'通知トリガー距離（m）', desc:'この距離以内に近づいたら通知', w:110, type:'num'},
-    {key:'announce_text', lbl:'アナウンステキスト',  desc:'通知バナーと音声フォールバックに使用', w:230},
-    {key:'audio_url',     lbl:'音声URL',             desc:'近づいたときに再生するMP3等', w:220, type:'audio'},
-    {key:'start_date',    lbl:'有効開始日',          desc:'YYYY-MM-DD（空白=常時）', w:105},
-    {key:'end_date',      lbl:'有効終了日',          desc:'YYYY-MM-DD（空白=常時）', w:105},
+    {key:'facility_id',   lbl:'施設ID',              desc:'一意の識別子（英数字）', w:140},
+    {key:'facility_name', lbl:'施設名',              desc:'トースト通知に表示される名称', w:150},
+    {key:'lat',           lbl:'緯度',                desc:'施設の緯度', w:95},
+    {key:'lng',           lbl:'経度',                desc:'施設の経度', w:95},
+    {key:'trigger_dist',  lbl:'通知距離（m）',       desc:'この距離以内に近づいたら通知', w:70, type:'num'},
+    {key:'announce_text', lbl:'アナウンステキスト',  desc:'通知バナーと音声フォールバックに使用', w:220},
+    {key:'audio_url',     lbl:'音声URL',             desc:'近づいたときに再生するMP3等', w:210, type:'audio'},
+    {key:'start_date',    lbl:'有効開始日',          desc:'YYYY-MM-DD（空白=常時）', w:95},
+    {key:'end_date',      lbl:'有効終了日',          desc:'YYYY-MM-DD（空白=常時）', w:95},
   ],
 };
 
@@ -843,6 +931,18 @@ function renderConfig(){
       chip.addEventListener('click',()=>ci.click());
       row.appendChild(inp); row.appendChild(chip); row.appendChild(ci);
       rc.appendChild(row);
+      // 色変更時にプレビューフラッシュ
+      inp.addEventListener('input',()=>flashPreviewElement(def.key));
+    } else if(FONT_KEYS.includes(def.key)){
+      // フォントピッカー
+      mkFontPicker(def.key, cur, orig, rc, val=>{
+        const normalized = normalizePxValue(def.key, val);
+        setCV(def.key, normalized);
+        const chg=normalized!==orig;
+        rc.classList.toggle('chg',chg);
+        recChg('config',def.key,orig,normalized);
+        updateConfigPreview();
+      });
     } else if(def.type==='audio'){
       const row=document.createElement('div'); row.className='cfg-in-row';
       row.appendChild(inp); row.appendChild(mkPlayBtn(()=>inp.value,def.lbl));
@@ -858,6 +958,14 @@ function renderConfig(){
       sel.addEventListener('change',()=>{setCV(def.key,sel.value);const chg=sel.value!==orig;rc.classList.toggle('chg',chg);recChg('config',def.key,orig,sel.value);updateConfigPreview();});
       rc.appendChild(sel);
     } else {
+      // px自動補完対象はblur時に正規化
+      if(PX_AUTO_KEYS.includes(def.key)){
+        inp.placeholder='数字のみでも可（例: 14）';
+        inp.addEventListener('blur',()=>{
+          const normalized=normalizePxValue(def.key,inp.value);
+          if(normalized!==inp.value){inp.value=normalized;inp.dispatchEvent(new Event('input'));}
+        });
+      }
       rc.appendChild(inp);
     }
 
@@ -884,6 +992,11 @@ function showRpConfig(){
   document.getElementById('rp-config').style.display='';
   document.getElementById('rp-map').style.display='none';
   document.getElementById('rp-title').textContent='📱 ライブプレビュー';
+  document.getElementById('zoom-controls').style.display='flex';
+  document.getElementById('btn-lbl-toggle').style.display='';
+  // 保存済みズームを復元
+  const savedZoom = parseFloat(localStorage.getItem('lwg_sim_zoom'));
+  if(savedZoom) { simZoom=savedZoom; document.getElementById('zoom-val').textContent=Math.round(simZoom*100)+'%'; }
   updateConfigPreview();
 }
 
@@ -961,7 +1074,18 @@ function updateConfigPreview(){
   simBody.appendChild(prizes);
 
   phone.appendChild(notch); phone.appendChild(hdr); phone.appendChild(simBody);
-  rp.appendChild(phone);
+
+  const phoneWrap = document.createElement('div');
+  phoneWrap.className = 'sim-phone-wrap';
+  phoneWrap.style.transform = `scale(${simZoom})`;
+  phoneWrap.appendChild(phone);
+  rp.appendChild(phoneWrap);
+
+  // クリックフォーカス・ラベルを再バインド
+  setTimeout(()=>{
+    bindPreviewClickFocus();
+    if(labelOverlayActive){ labelOverlayActive=false; toggleLabelOverlay(); }
+  }, 50);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1243,6 +1367,8 @@ function showRpMap(){
   document.getElementById('rp-config').style.display='none';
   const mapEl=document.getElementById('rp-map'); mapEl.style.display='flex';
   document.getElementById('rp-title').textContent='🗺 地図表示';
+  document.getElementById('zoom-controls').style.display='none';
+  document.getElementById('btn-lbl-toggle').style.display='none';
   document.getElementById('map-legend').innerHTML='<div class="map-empty" style="height:36px;"><span style="font-size:10px;color:var(--dim);">行の🗺ボタンをクリックすると地図が表示されます</span></div>';
   initLeaflet();
   clearMap();
@@ -1452,8 +1578,290 @@ function showLd(m){document.getElementById('ld-txt').textContent=m||'処理中�
 function hideLd(){document.getElementById('ld-mask').classList.remove('show');}
 let nt=null;
 function notify(m,err){const el=document.getElementById('notif');el.textContent=(err?'⚠ ':'✓ ')+m;el.className='notif'+(err?' err':'')+' show';if(nt)clearTimeout(nt);nt=setTimeout(()=>el.classList.remove('show'),3500);}
-window.addEventListener('DOMContentLoaded',()=>{showTab('config');document.getElementById('gas-code-display').textContent=GAS_CODE;});
+window.addEventListener('DOMContentLoaded',()=>{
+  showTab('config');
+  document.getElementById('gas-code-display').textContent=GAS_CODE;
+  initResizeHandle();
+  initEditorSize();
+});
 document.getElementById('gas-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeGasModal();});
+document.getElementById('diff-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDiffModal();});
+
+// ═══════════════════════════════════════════════════════
+// A: RESIZE HANDLE — 右パネル幅をドラッグ調整
+// ═══════════════════════════════════════════════════════
+const RP_DEFAULT_W = 356;
+const RP_MIN_W = 260;
+const RP_MAX_W = 700;
+
+function initResizeHandle(){
+  const handle = document.getElementById('resize-handle');
+  const panel  = document.getElementById('right-panel');
+
+  // 保存済み幅を復元
+  const saved = parseInt(localStorage.getItem('lwg_rp_width'));
+  if(saved && saved >= RP_MIN_W && saved <= RP_MAX_W) panel.style.width = saved + 'px';
+
+  let startX, startW;
+  handle.addEventListener('mousedown', e => {
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = ev => {
+      const delta = startX - ev.clientX; // 左に引くと広がる
+      const newW = Math.min(RP_MAX_W, Math.max(RP_MIN_W, startW + delta));
+      panel.style.width = newW + 'px';
+    };
+    const onUp = () => {
+      handle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      const w = parseInt(panel.style.width);
+      localStorage.setItem('lwg_rp_width', w);
+      if(leafletMap) setTimeout(()=>leafletMap.invalidateSize(),50);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    e.preventDefault();
+  });
+
+  // ダブルクリックでリセット
+  handle.addEventListener('dblclick', () => {
+    panel.style.width = RP_DEFAULT_W + 'px';
+    localStorage.removeItem('lwg_rp_width');
+    if(leafletMap) setTimeout(()=>leafletMap.invalidateSize(),50);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// ①: PREVIEW ZOOM
+// ═══════════════════════════════════════════════════════
+let simZoom = 1.0;
+
+function changeZoom(delta){
+  simZoom = Math.min(2.0, Math.max(0.5, simZoom + delta));
+  simZoom = Math.round(simZoom * 10) / 10;
+  document.getElementById('zoom-val').textContent = Math.round(simZoom * 100) + '%';
+  const wrap = document.querySelector('.sim-phone-wrap');
+  if(wrap) wrap.style.transform = `scale(${simZoom})`;
+  localStorage.setItem('lwg_sim_zoom', simZoom);
+}
+
+// ═══════════════════════════════════════════════════════
+// ②: COLOR FLASH — 変更箇所をプレビュー内でフラッシュ
+// ═══════════════════════════════════════════════════════
+const COLOR_FLASH_MAP = {
+  color_ink:     ['.sim-phone', '.sim-hdr'],
+  color_primary: ['.sim-badge', '.sim-course.rec'],
+  color_gold:    ['.sim-prizes'],
+  color_bg:      ['.sim-body'],
+  color_paper:   ['.sim-course'],
+};
+
+function flashPreviewElement(key){
+  const selectors = COLOR_FLASH_MAP[key];
+  if(!selectors) return;
+  selectors.forEach(sel => {
+    const el = document.querySelector(sel);
+    if(!el) return;
+    el.classList.remove('sim-flash');
+    void el.offsetWidth; // reflow
+    el.classList.add('sim-flash');
+    setTimeout(()=>el.classList.remove('sim-flash'), 800);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// ③: LABEL OVERLAY — プレビュー内にキー名を表示
+// ═══════════════════════════════════════════════════════
+let labelOverlayActive = false;
+const LABEL_TARGETS = [
+  {sel:'.sim-hdr',    key:'color_ink / header_type', pos:{top:'4px',left:'4px'}},
+  {sel:'.sim-badge',  key:'home_badge_text / color_primary', pos:{top:'4px',left:'4px'}},
+  {sel:'.sim-title',  key:'app_title', pos:{bottom:'2px',left:'4px'}},
+  {sel:'.sim-sub',    key:'app_subtitle', pos:{bottom:'2px',left:'4px'}},
+  {sel:'.sim-body',   key:'color_bg (背景)', pos:{top:'4px',right:'4px'}},
+  {sel:'.sim-prizes', key:'color_gold', pos:{top:'2px',left:'4px'}},
+];
+
+function toggleLabelOverlay(){
+  labelOverlayActive = !labelOverlayActive;
+  const btn = document.getElementById('btn-lbl-toggle');
+  btn.classList.toggle('active', labelOverlayActive);
+  document.querySelectorAll('.sim-label-tag').forEach(el=>el.remove());
+  if(!labelOverlayActive) return;
+  LABEL_TARGETS.forEach(t=>{
+    const target = document.querySelector(t.sel);
+    if(!target) return;
+    const tag = document.createElement('div');
+    tag.className = 'sim-label-tag';
+    tag.textContent = t.key;
+    Object.assign(tag.style, t.pos, {position:'absolute'});
+    target.style.position = 'relative';
+    target.appendChild(tag);
+  });
+}
+
+// ④: CLICK-TO-FOCUS — プレビュー要素クリックで対応フォームへスクロール
+const CLICK_FOCUS_MAP = {
+  '.sim-title':  'app_title',
+  '.sim-sub':    'app_subtitle',
+  '.sim-badge':  'home_badge_text',
+  '.sim-hdr':    'header_type',
+  '.sim-body':   'color_bg',
+  '.sim-prizes': 'color_gold',
+};
+
+function bindPreviewClickFocus(){
+  Object.entries(CLICK_FOCUS_MAP).forEach(([sel, key])=>{
+    const el = document.querySelector(sel);
+    if(!el) return;
+    el.style.cursor = 'pointer';
+    el.title = `クリックで「${key}」にジャンプ`;
+    el.onclick = ()=> focusConfigKey(key);
+  });
+}
+
+function focusConfigKey(key){
+  const rows = document.querySelectorAll('.cfg-row');
+  for(const row of rows){
+    const kn = row.querySelector('.cfg-kn');
+    if(kn && kn.textContent === key){
+      row.scrollIntoView({behavior:'smooth', block:'center'});
+      const inp = row.querySelector('.cfg-in, select.cfg-in');
+      if(inp){ inp.focus(); inp.style.transition='box-shadow .2s'; inp.style.boxShadow='0 0 0 3px rgba(184,50,50,.4)'; setTimeout(()=>inp.style.boxShadow='',1200); }
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// ⑤: PRE-SAVE DIFF MODAL
+// ═══════════════════════════════════════════════════════
+let pendingSaveCallback = null;
+
+function showDiffModal(changesObj, onConfirm){
+  const tbody = document.getElementById('diff-tbody');
+  tbody.innerHTML = '';
+  const entries = Object.entries(changesObj);
+  if(entries.length === 0){ onConfirm(); return; } // 変更なしはそのまま保存
+  entries.forEach(([k, v])=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="diff-key">${k}</td><td><div class="diff-old">${v.old||'（空）'}</div></td><td><div class="diff-new">${v.new||'（空）'}</div></td>`;
+    tbody.appendChild(tr);
+  });
+  pendingSaveCallback = onConfirm;
+  document.getElementById('diff-confirm-btn').onclick = ()=>{ closeDiffModal(); onConfirm(); };
+  document.getElementById('diff-modal').classList.add('show');
+}
+
+function closeDiffModal(){ document.getElementById('diff-modal').classList.remove('show'); pendingSaveCallback=null; }
+
+// saveCurrentSheet を差分確認付きに上書き
+const _origSaveCurrentSheet = saveCurrentSheet;
+window.saveCurrentSheet = async function(){
+  if(!state.loaded){notify('データを読み込んでください',true);return;}
+  // 変更内容を収集
+  const allChg = {};
+  const keys = currentTab==='courses'?['courses','course_spots']:[currentTab];
+  keys.forEach(k=>Object.assign(allChg, changes[k]||{}));
+  if(Object.keys(allChg).length === 0){ notify('変更がありません'); return; }
+  showDiffModal(allChg, ()=> _origSaveCurrentSheet());
+};
+
+// ═══════════════════════════════════════════════════════
+// ⑦: FONT SIZE AUTO-PX
+// ═══════════════════════════════════════════════════════
+const PX_AUTO_KEYS = ['font_size_base','font_size_heading','font_size_explain','cert_title_font_size','cert_seal_size','cert_seal_text_size'];
+
+function normalizePxValue(key, val){
+  if(!PX_AUTO_KEYS.includes(key)) return val;
+  const trimmed = val.trim();
+  if(!trimmed) return trimmed;
+  if(/^\d+(\.\d+)?$/.test(trimmed)) return trimmed + 'px';
+  return trimmed;
+}
+
+// ═══════════════════════════════════════════════════════
+// ⑧: EDITOR SIZE TOGGLE
+// ═══════════════════════════════════════════════════════
+const SIZE_MAP = {s:'13px', m:'15px', l:'17px'};
+
+function setEditorSize(sz){
+  document.body.style.fontSize = SIZE_MAP[sz] || '13px';
+  ['sz-s','sz-m','sz-l'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+  document.getElementById('sz-'+sz)?.classList.add('active');
+  localStorage.setItem('lwg_editor_size', sz);
+}
+
+function initEditorSize(){
+  const saved = localStorage.getItem('lwg_editor_size') || 's';
+  setEditorSize(saved);
+}
+
+// ═══════════════════════════════════════════════════════
+// ⑨: FONT PICKER
+// ═══════════════════════════════════════════════════════
+const JP_FONTS = [
+  {name:'Noto Sans JP', label:'Noto Sans JP（游ゴシック系・読みやすい）'},
+  {name:'Noto Serif JP', label:'Noto Serif JP（明朝・上品）'},
+  {name:'Shippori Mincho', label:'Shippori Mincho（細明朝・和風）'},
+  {name:'Yuji Syuku', label:'Yuji Syuku（毛筆・格調高い）'},
+  {name:'Kaisei Decol', label:'Kaisei Decol（アンティーク明朝）'},
+  {name:'Zen Maru Gothic', label:'Zen Maru Gothic（丸ゴシック・柔らか）'},
+  {name:'Hina Mincho', label:'Hina Mincho（細い明朝・繊細）'},
+  {name:'M PLUS Rounded 1c', label:'M PLUS Rounded 1c（丸みゴシック）'},
+  {name:'Sawarabi Mincho', label:'Sawarabi Mincho（さわらび明朝）'},
+  {name:'Sawarabi Gothic', label:'Sawarabi Gothic（さわらびゴシック）'},
+];
+const FONT_KEYS = ['font_title','font_body'];
+
+function mkFontPicker(key, cur, orig, rc, onChg){
+  const wrap = document.createElement('div'); wrap.className='font-picker-wrap';
+  const preview = document.createElement('div'); preview.className='font-preview'; preview.textContent='増田まち歩きガイド / MACHI ARUKI';
+  if(cur) preview.style.fontFamily=`'${cur}', serif`;
+
+  const sel = document.createElement('select'); sel.className='font-picker-sel';
+  const defOpt = document.createElement('option'); defOpt.value=''; defOpt.textContent='── フォントを選択 ──'; sel.appendChild(defOpt);
+  JP_FONTS.forEach(f=>{
+    const o=document.createElement('option'); o.value=f.name; o.textContent=f.label;
+    if(cur===f.name) o.selected=true;
+    sel.appendChild(o);
+  });
+  // 直接入力欄（選択肢にないフォントも可）
+  const inp = document.createElement('input'); inp.type='text'; inp.className='cfg-in'; inp.value=cur; inp.placeholder='または直接入力';
+  inp.style.marginTop='0';
+
+  sel.addEventListener('change',()=>{
+    inp.value=sel.value;
+    preview.style.fontFamily=sel.value?`'${sel.value}', serif`:'';
+    preview.textContent='増田まち歩きガイド / MACHI ARUKI';
+    onChg(sel.value);
+    // Googleフォントを動的に読み込む
+    if(sel.value) loadGoogleFont(sel.value);
+  });
+  inp.addEventListener('input',()=>{
+    preview.style.fontFamily=inp.value?`'${inp.value}', serif`:'';
+    onChg(inp.value);
+  });
+
+  wrap.appendChild(preview); wrap.appendChild(sel); wrap.appendChild(inp);
+  rc.appendChild(wrap);
+}
+
+function loadGoogleFont(name){
+  const id='gf-'+name.replace(/\s/g,'-');
+  if(document.getElementById(id)) return;
+  const link=document.createElement('link'); link.id=id; link.rel='stylesheet';
+  link.href=`https://fonts.googleapis.com/css2?family=${encodeURIComponent(name)}&display=swap`;
+  document.head.appendChild(link);
+}
+
 </script>
 </body>
 </html>
