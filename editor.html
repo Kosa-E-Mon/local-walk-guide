@@ -298,10 +298,10 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 
 /* v4.1 layout fixes */
 :root{--editor-font-size:13px;}
-.hdr{height:auto;min-height:56px;flex-wrap:wrap;align-content:center;padding:7px 14px;overflow:visible;}
+.hdr{height:auto;min-height:56px;max-height:112px;flex-wrap:wrap;align-content:center;padding:7px 14px;overflow-y:auto;overflow-x:hidden;}
 .hdr-field{min-width:0;}
 .hdr-in{width:clamp(180px,22vw,300px);}
-.hdr .spacer{min-width:12px;}
+.hdr>.spacer{display:none;}
 .main{min-height:0;}
 .ed-body{min-height:0;scrollbar-gutter:stable;}
 .cfg-split{width:min(100%,740px);max-width:740px;grid-template-columns:minmax(170px,.82fr) minmax(220px,1fr);overflow:auto;scrollbar-gutter:stable;}
@@ -316,10 +316,14 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 table.dt{font-size:calc(var(--editor-font-size) - 2px);}
 #rp-config{align-items:flex-start;justify-content:flex-start;overflow:auto;cursor:grab;scrollbar-gutter:stable;background:var(--bg);}
 #rp-config.dragging{cursor:grabbing;user-select:none;}
-.sim-phone-wrap{width:max(100%,calc(220px * var(--sim-zoom,1) + 40px));height:max(100%,calc(460px * var(--sim-zoom,1) + 40px));min-width:calc(220px * var(--sim-zoom,1) + 40px);min-height:calc(460px * var(--sim-zoom,1) + 40px);display:flex;align-items:center;justify-content:center;transform-origin:center center;}
+.sim-phone-wrap{width:max(100%,calc(220px * var(--sim-zoom,1) + 40px));height:max(100%,calc(460px * var(--sim-zoom,1) + 40px));min-width:calc(220px * var(--sim-zoom,1) + 40px);min-height:calc(460px * var(--sim-zoom,1) + 40px);display:flex;align-items:center;justify-content:center;}
+.sim-phone{transform:scale(var(--sim-zoom,1));transform-origin:center center;}
+.config-rail{width:60px;background:var(--surface);border-right:1px solid var(--border);display:none;flex-direction:column;align-items:center;gap:6px;padding:9px 6px;overflow-y:auto;flex-shrink:0;}
+.config-rail.show{display:flex;}
+.cfg-jump-btn{width:46px;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--raised);color:var(--muted);font-size:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;}
+.cfg-jump-btn:hover,.cfg-jump-btn.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
 @media (max-width:1100px){
   .logo{width:100%;}
-  .hdr .spacer{display:none;}
   .hdr-sep{display:none;}
   .right-panel{width:320px;}
 }
@@ -385,6 +389,8 @@ table.dt{font-size:calc(var(--editor-font-size) - 2px);}
       GAS URL設定済み時:<br>「シートを保存」で<br>スプレッドシートに<br>直接書き込みます。
     </div>
   </nav>
+
+  <div class="config-rail" id="config-rail" title="CONFIG内ショートカット"></div>
 
   <!-- EDITOR -->
   <div class="ed-wrap">
@@ -890,6 +896,7 @@ function showTab(tab){
   currentTab=tab;
   document.querySelectorAll('.nav-it').forEach(el=>el.classList.remove('active'));
   document.getElementById('nav-'+tab)?.classList.add('active');
+  document.getElementById('config-rail')?.classList.toggle('show', tab==='config');
   document.getElementById('ed-title').innerHTML=`SHEET: <em>${TAB_LABELS[tab]||tab}</em>`;
   if(!state.loaded){document.getElementById('ed-body').innerHTML='<div class="empty-st"><div class="empty-ic">📂</div>先にデータを読み込んでください</div>';return;}
   if(tab==='config'){renderConfig();showRpConfig();}
@@ -903,10 +910,53 @@ function showTab(tab){
 // CONFIG RENDER (SPLIT VIEW)
 // ═══════════════════════════════════════════════════════
 
+const CONFIG_SHORTCUTS = [
+  {key:'area_name', label:'エリア'},
+  {key:'color_bg', label:'背景'},
+  {key:'header_type', label:'ヘッダー'},
+  {key:'home_badge_text', label:'バッジ'},
+  {key:'caution_shigaichi', label:'コース'},
+  {key:'caution_shigaichi_url', label:'案内'},
+  {key:'special_enabled', label:'特別'},
+  {key:'cert_award_title', label:'終了証'},
+  {key:'next_lock_sec', label:'その他'},
+];
+
+function getConfigDisplayDefs(){
+  const areaStart = CONFIG_DEFS.findIndex((d,i)=>d.sec && CONFIG_DEFS[i+1]?.key === 'area_pref');
+  if(areaStart < 0) return CONFIG_DEFS;
+  let areaEnd = CONFIG_DEFS.findIndex((d,i)=>i > areaStart && d.sec);
+  if(areaEnd < 0) areaEnd = CONFIG_DEFS.length;
+  const areaBlock = CONFIG_DEFS.slice(areaStart, areaEnd);
+  const out = [];
+  CONFIG_DEFS.forEach((def, idx)=>{
+    if(idx >= areaStart && idx < areaEnd) return;
+    out.push(def);
+    if(def.key === 'area_name') out.push(...areaBlock);
+  });
+  return out;
+}
+
+function renderConfigRail(){
+  const rail = document.getElementById('config-rail');
+  if(!rail) return;
+  rail.innerHTML = '';
+  CONFIG_SHORTCUTS.forEach(item=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cfg-jump-btn';
+    btn.textContent = item.label;
+    btn.title = item.label + '設定へ移動';
+    btn.onclick = ()=>focusConfigKey(item.key);
+    rail.appendChild(btn);
+  });
+}
+
 function renderConfig(){
   const map={}, origMap={};
   state.config.forEach(r=>{if(r.key) map[r.key]=r.value??'';});
   (state.originals.config||[]).forEach(r=>{if(r.key) origMap[r.key]=r.value??'';});
+  renderConfigRail();
 
   const body=document.getElementById('ed-body'); body.innerHTML='';
   const wrap=document.createElement('div');
@@ -916,7 +966,7 @@ function renderConfig(){
   const grid=document.createElement('div'); grid.className='cfg-split';
 
   let sec=null;
-  CONFIG_DEFS.forEach(def=>{
+  getConfigDisplayDefs().forEach(def=>{
     if(def.sec){
       // Section headers (both columns)
       const lh=document.createElement('div');lh.className='cfg-sec-h';lh.textContent=def.sec;
@@ -1686,11 +1736,13 @@ function applySimZoom(wrap){
   document.getElementById('zoom-val').textContent = Math.round(simZoom * 100) + '%';
   if(!wrap) return;
   wrap.style.setProperty('--sim-zoom', simZoom);
-  wrap.style.transform = `scale(${simZoom})`;
+  wrap.style.transform = 'none';
   wrap.style.width = `max(100%, ${SIM_PHONE_W * simZoom + 40}px)`;
   wrap.style.height = `max(100%, ${SIM_PHONE_H * simZoom + 40}px)`;
   wrap.style.minWidth = `${SIM_PHONE_W * simZoom + 40}px`;
   wrap.style.minHeight = `${SIM_PHONE_H * simZoom + 40}px`;
+  const phone = wrap.querySelector('.sim-phone');
+  if(phone) phone.style.setProperty('--sim-zoom', simZoom);
 }
 
 function initPreviewPan(){
