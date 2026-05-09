@@ -259,6 +259,9 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 .sim-zoom-btn{background:var(--raised);border:1px solid var(--border);color:var(--muted);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .12s;line-height:1;}
 .sim-zoom-btn:hover{border-color:var(--accent);color:var(--accent);}
 .sim-zoom-val{font-size:10px;color:var(--dim);font-family:var(--mono);min-width:30px;text-align:center;}
+.preview-mode-wrap{display:flex;align-items:center;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2px;}
+.preview-mode-btn{border:0;background:transparent;color:var(--muted);border-radius:4px;padding:3px 7px;font-size:10px;cursor:pointer;white-space:nowrap;}
+.preview-mode-btn.active{background:var(--accent);color:white;font-weight:600;}
 #rp-config{transition:background .2s;}
 .sim-phone-wrap{display:flex;align-items:center;justify-content:center;width:100%;height:100%;}
 
@@ -321,8 +324,8 @@ body{height:100dvh;overflow:hidden;}
 table.dt{font-size:calc(var(--editor-font-size) - 2px);}
 #rp-config{align-items:flex-start;justify-content:flex-start;overflow:auto;cursor:grab;scrollbar-gutter:stable;background:var(--bg);}
 #rp-config.dragging{cursor:grabbing;user-select:none;}
-.sim-phone-wrap{width:max(100%,calc(220px * var(--sim-zoom,1) + 120px));height:max(100%,calc(460px * var(--sim-zoom,1) + 180px));min-width:calc(220px * var(--sim-zoom,1) + 120px);min-height:calc(460px * var(--sim-zoom,1) + 180px);padding:90px 60px;display:flex;align-items:center;justify-content:center;}
-.sim-phone{transform:scale(var(--sim-zoom,1));transform-origin:center center;}
+.sim-phone-wrap{width:max(100%,calc(220px * var(--sim-zoom,1) + 120px));height:max(100%,calc(460px * var(--sim-zoom,1) + 180px));min-width:calc(220px * var(--sim-zoom,1) + 120px);min-height:calc(460px * var(--sim-zoom,1) + 180px);padding:90px 60px;display:flex;align-items:flex-start;justify-content:center;}
+.sim-phone{transform:scale(var(--sim-zoom,1));transform-origin:top center;}
 .config-rail{width:60px;background:var(--surface);border-right:1px solid var(--border);display:none;flex-direction:column;align-items:center;gap:6px;padding:9px 6px;overflow-y:auto;flex-shrink:0;}
 .config-rail.show{display:flex;}
 .cfg-jump-btn{width:46px;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--raised);color:var(--muted);font-size:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;}
@@ -417,6 +420,11 @@ table.dt{font-size:calc(var(--editor-font-size) - 2px);}
     <div class="rp-bar">
       <span class="rp-title" id="rp-title">📱 ライブプレビュー</span>
       <div class="spacer"></div>
+      <div class="preview-mode-wrap" id="preview-mode-controls" style="display:none;">
+        <button class="preview-mode-btn active" id="pm-dark" onclick="setPreviewMode('dark')">ダーク</button>
+        <button class="preview-mode-btn" id="pm-light" onclick="setPreviewMode('light')">ライト</button>
+        <button class="preview-mode-btn" id="pm-cert" onclick="setPreviewMode('cert')">修了証</button>
+      </div>
       <div class="sim-zoom-wrap" id="zoom-controls" style="display:none;">
         <button class="sim-zoom-btn" onclick="changeZoom(-0.1)" title="縮小">－</button>
         <span class="sim-zoom-val" id="zoom-val">100%</span>
@@ -923,7 +931,7 @@ const CONFIG_SHORTCUTS = [
   {key:'caution_shigaichi', label:'コース'},
   {key:'caution_shigaichi_url', label:'案内'},
   {key:'special_enabled', label:'特別'},
-  {key:'cert_award_title', label:'終了証'},
+  {key:'cert_award_title', label:'修了証'},
   {key:'next_lock_sec', label:'その他'},
 ];
 
@@ -1076,11 +1084,60 @@ function showRpConfig(){
   document.getElementById('rp-map').style.display='none';
   document.getElementById('rp-title').textContent='📱 ライブプレビュー';
   document.getElementById('zoom-controls').style.display='flex';
+  document.getElementById('preview-mode-controls').style.display='flex';
   document.getElementById('btn-lbl-toggle').style.display='';
   // 保存済みズームを復元
   const savedZoom = parseFloat(localStorage.getItem('lwg_sim_zoom'));
   if(savedZoom) { simZoom=savedZoom; document.getElementById('zoom-val').textContent=Math.round(simZoom*100)+'%'; }
   updateConfigPreview();
+}
+
+let previewMode = 'dark';
+
+function setPreviewMode(mode){
+  previewMode = mode;
+  ['dark','light','cert'].forEach(m=>document.getElementById('pm-'+m)?.classList.toggle('active', m===mode));
+  updateConfigPreview();
+}
+
+function renderCertPreview(rp,c){
+  const phone=document.createElement('div'); phone.className='sim-phone';
+  phone.style.background=c.bg;
+  const notch=document.createElement('div'); notch.className='sim-notch'; notch.style.background=c.ink;
+  const body=document.createElement('div');
+  body.style.cssText=`height:100%;padding:34px 16px 18px;background:${c.bg};display:flex;align-items:center;justify-content:center;`;
+
+  const cert=document.createElement('div');
+  cert.style.cssText=`width:100%;min-height:360px;background:${c.paper};border:2px solid ${c.gold};box-shadow:inset 0 0 0 5px ${c.paper},inset 0 0 0 6px ${c.border};padding:28px 18px 20px;color:${c.ink};display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;`;
+
+  const award=document.createElement('div');
+  award.textContent=getCfg('cert_award_title')||'修了証';
+  award.style.cssText=`font-family:'${getCfg('cert_title_font_family')||'serif'}';font-size:${getCfg('cert_title_font_size')||'32px'};letter-spacing:${getCfg('cert_title_letter_spacing')||'.18em'};font-weight:700;color:${c.ink};margin-top:8px;margin-bottom:20px;`;
+
+  const name=document.createElement('div');
+  name.textContent='まち歩き参加者 様';
+  name.style.cssText=`font-size:14px;border-bottom:1px solid ${c.border};padding:0 12px 6px;margin-bottom:20px;width:86%;`;
+
+  const text=document.createElement('div');
+  text.textContent=getCfg('cert_body_text')||'全てのまち歩きコースを修了したことをここに証します。';
+  text.style.cssText=`font-size:11px;line-height:1.8;color:${c.muted};margin-bottom:22px;`;
+
+  const issuer=document.createElement('div');
+  issuer.textContent=getCfg('cert_issuer')||getCfg('area_name')||c.title;
+  issuer.style.cssText='font-size:11px;align-self:flex-end;margin-right:10px;';
+
+  const seal=document.createElement('div');
+  seal.textContent=getCfg('cert_seal_text')||'修了';
+  seal.style.cssText=`position:absolute;right:18px;bottom:18px;width:${getCfg('cert_seal_size')||'64px'};height:${getCfg('cert_seal_size')||'64px'};border-radius:50%;border:${getCfg('cert_seal_border_width')||'2px'} solid ${getCfg('cert_seal_border_color')||c.primary};background:${getCfg('cert_seal_bg')||'transparent'};color:${getCfg('cert_seal_text_color')||c.primary};font-family:'${getCfg('cert_seal_font_family')||'serif'}';font-size:${getCfg('cert_seal_text_size')||'12px'};line-height:${getCfg('cert_seal_line_height')||'1.5'};display:flex;align-items:center;justify-content:center;white-space:pre-line;`;
+
+  cert.appendChild(award); cert.appendChild(name); cert.appendChild(text); cert.appendChild(issuer); cert.appendChild(seal);
+  body.appendChild(cert); phone.appendChild(notch); phone.appendChild(body);
+
+  const phoneWrap=document.createElement('div');
+  phoneWrap.className='sim-phone-wrap';
+  applySimZoom(phoneWrap);
+  phoneWrap.appendChild(phone);
+  rp.appendChild(phoneWrap);
 }
 
 function updateConfigPreview(){
@@ -1089,6 +1146,9 @@ function updateConfigPreview(){
   const primary=getCfg('color_primary')||'#B83232';
   const gold=getCfg('color_gold')||'#9A7A3A';
   const bg=getCfg('color_bg')||'#F4EFE4';
+  const paper=getCfg('color_paper')||'#FAF7F1';
+  const muted=getCfg('color_muted')||'#7A7060';
+  const border=getCfg('color_border')||'#D4C9B0';
   const title=getCfg('app_title')||'まち歩きガイド';
   const sub=getCfg('app_subtitle')||'';
   const headerType=getCfg('header_type');
@@ -1099,17 +1159,29 @@ function updateConfigPreview(){
 
   const rp=document.getElementById('rp-config');
   rp.innerHTML='';
-  rp.style.cssText='height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:10px;overflow:hidden;';
+  rp.style.cssText='height:100%;display:flex;align-items:flex-start;justify-content:flex-start;background:var(--bg);padding:10px;overflow:auto;';
+
+  if(previewMode==='cert'){
+    renderCertPreview(rp,{ink,primary,gold,bg,paper,muted,border,title});
+    return;
+  }
+
+  const isLight = previewMode==='light';
+  const textMain = isLight ? ink : '#FAF7F1';
+  const textSoft = isLight ? muted : 'rgba(250,247,241,.4)';
+  const phoneBg = isLight ? bg : ink;
+  const cardBg = isLight ? paper : 'rgba(255,255,255,.05)';
+  const cardBorder = isLight ? border : 'rgba(255,255,255,.08)';
 
   const phone=document.createElement('div'); phone.className='sim-phone';
-  phone.style.background=ink;
+  phone.style.background=phoneBg;
 
   const notch=document.createElement('div'); notch.className='sim-notch'; notch.style.background=ink;
 
   const hdr=document.createElement('div'); hdr.className='sim-hdr';
-  hdr.style.background=ink;
+  hdr.style.background=isLight?paper:ink;
   const ov=document.createElement('div'); ov.className='sim-hdr-ov';
-  hdr.appendChild(ov);
+  if(!isLight) hdr.appendChild(ov);
 
   if(headerType==='image'&&headerImg){
     const img=document.createElement('img'); img.className='sim-hdr-img';
@@ -1124,36 +1196,46 @@ function updateConfigPreview(){
   badge.textContent='WALKING GUIDE';
 
   const ttl=document.createElement('div'); ttl.className='sim-title';
-  ttl.style.color='#FAF7F1'; ttl.textContent=title;
+  ttl.style.color=textMain; ttl.textContent=title;
   const stl=document.createElement('div'); stl.className='sim-sub';
-  stl.style.color='#FAF7F1'; stl.textContent=sub;
+  stl.style.color=textSoft; stl.textContent=sub;
 
   hdr.appendChild(badge); hdr.appendChild(ttl); hdr.appendChild(stl);
 
   const simBody=document.createElement('div'); simBody.className='sim-body';
+  if(isLight) simBody.style.background=bg;
 
   // Section label
   if(sampleCourses.some(c=>c.recommended==='TRUE'||c.recommended===true)){
     const sl=document.createElement('div');
     sl.style.cssText='font-size:8px;letter-spacing:.15em;margin-bottom:5px;';
+    sl.style.color=textSoft;
     sl.style.color='rgba(250,247,241,.35)'; sl.textContent='おすすめ ★';
+    sl.style.color=textSoft;
     simBody.appendChild(sl);
   }
 
   sampleCourses.forEach((c,i)=>{
     const card=document.createElement('div'); card.className='sim-course';
     const isRec=c.recommended==='TRUE'||c.recommended===true;
+    card.style.background=cardBg;
+    card.style.borderColor=isRec?primary+'66':cardBorder;
     card.style.cssText=`background:rgba(255,255,255,.05);border-color:${isRec?primary+'66':'rgba(255,255,255,.08)'};`;
+    card.style.background=cardBg;
+    card.style.borderColor=isRec?primary+'66':cardBorder;
     const type=document.createElement('div'); type.className='sim-course-type'; type.style.color='rgba(250,247,241,.35)'; type.textContent=c.course_type||'コース';
     const name=document.createElement('div'); name.className='sim-course-name'; name.style.color='#FAF7F1'; name.textContent=c.course_name||`コース${i+1}`;
     const meta=document.createElement('div'); meta.className='sim-course-meta'; meta.style.color='rgba(250,247,241,.4)';
     meta.textContent=`🕐 約${c.duration_min||'?'}分 📍 約${c.distance_m||'?'}m`;
+    type.style.color=textSoft; name.style.color=textMain; meta.style.color=textSoft;
     card.appendChild(type); card.appendChild(name); card.appendChild(meta);
     simBody.appendChild(card);
   });
 
   const prizes=document.createElement('div'); prizes.className='sim-prizes';
+  if(isLight) prizes.style.borderColor=border;
   prizes.style.color='rgba(250,247,241,.35)'; prizes.textContent='🏅 プライズ・御朱印帳を見る';
+  if(isLight){prizes.style.color=gold; prizes.style.borderColor=border;}
   simBody.appendChild(prizes);
 
   phone.appendChild(notch); phone.appendChild(hdr); phone.appendChild(simBody);
@@ -1451,6 +1533,7 @@ function showRpMap(){
   const mapEl=document.getElementById('rp-map'); mapEl.style.display='flex';
   document.getElementById('rp-title').textContent='🗺 地図表示';
   document.getElementById('zoom-controls').style.display='none';
+  document.getElementById('preview-mode-controls').style.display='none';
   document.getElementById('btn-lbl-toggle').style.display='none';
   document.getElementById('map-legend').innerHTML='<div class="map-empty" style="height:36px;"><span style="font-size:10px;color:var(--dim);">行の🗺ボタンをクリックすると地図が表示されます</span></div>';
   initLeaflet();
