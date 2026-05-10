@@ -297,6 +297,7 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 .font-picker-wrap{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
 .font-picker-sel{width:100%;background:var(--raised);border:1.5px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:5px 9px;outline:none;cursor:pointer;}
 .font-picker-sel:focus{border-color:var(--accent);}
+.font-picker-sel option{font-size:14px;padding:6px 8px;}
 .font-preview{font-size:12px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* v4.1 layout fixes */
@@ -621,7 +622,6 @@ const CONFIG_DEFS = [
   {key:'header_type',      lbl:'ヘッダータイプ',            desc:'「image」で画像表示 / 「none」で非表示'},
   {key:'header_style',     lbl:'ヘッダースタイル',          desc:'A: グラデ標準 / B: 写真ゾーン分離 / C: テキストシャドウ（デフォルト: A）'},
   {key:'header_image_url', lbl:'ヘッダー画像URL（優先）',   desc:'GitHub Pages等の直接URL（こちらが優先）'},
-  {key:'header_image_id',  lbl:'ヘッダー画像ID（旧式）',    desc:'Google DriveファイルID（/d/〇〇〇/ の部分）'},
   {sec:'🏷 ホームバッジ設定'},
   {key:'home_badge_text',          lbl:'バッジテキスト',        desc:'ヘッダー内バッジに表示するテキスト。例: MACHI ARUKI GUIDE'},
   {key:'home_badge_font_size',     lbl:'バッジフォントサイズ',  desc:'例: 9px'},
@@ -749,6 +749,7 @@ function splitL(line){const r=[];let cur='',inQ=false;for(let i=0;i<line.length;
 function esc(v){const s=String(v??'');return(s.includes(',')||s.includes('"')||s.includes('\n'))?`"${s.replace(/"/g,'""')}"`  :s;}
 function buildCSV(hdrs,rows){return[hdrs.map(esc).join(','),...rows.map(r=>hdrs.map(h=>esc(r[h]??'')).join(','))].join('\n');}
 function dc(o){return JSON.parse(JSON.stringify(o));}
+function cleanConfigRows(rows){return (rows||[]).filter(r=>r.key !== 'header_image_id');}
 
 function parseSheetId(input){
   const m=input.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
@@ -777,6 +778,7 @@ async function loadData(){
     const sheets=['config','courses','spots','course_spots','facilities'];
     const csvs=await Promise.all(sheets.map(s=>fetchGviz(sid,s)));
     sheets.forEach((s,i)=>{state[s]=parseCSV(csvs[i]);});
+    state.config=cleanConfigRows(state.config);
     state.originals={};
     sheets.forEach(s=>{state.originals[s]=dc(state[s]);});
     Object.keys(changes).forEach(k=>{changes[k]={};});
@@ -855,7 +857,7 @@ async function saveCurrentSheet(){
   try{
     const sheetsToSave=currentTab==='courses'?['courses','course_spots']:[currentTab];
     for(const s of sheetsToSave){
-      const rows=s==='config'?state.config:state[s];
+      const rows=s==='config'?cleanConfigRows(state.config):state[s];
       await gasWrite(s,rows);
     }
     // Re-read after short delay
@@ -935,6 +937,15 @@ const CONFIG_SHORTCUTS = [
   {key:'next_lock_sec', label:'その他'},
 ];
 
+const TITLE_STYLE_DEFS = [
+  {key:'app_title_color',       lbl:'アプリタイトル文字色',       desc:'ホーム上部の app_title の文字色。例: #FAF7F1', type:'color'},
+  {key:'app_title_font_size',   lbl:'アプリタイトル文字サイズ',   desc:'ホーム上部の app_title の文字サイズ。例: 30px'},
+  {key:'app_title_font',        lbl:'アプリタイトルフォント',     desc:'ホーム上部の app_title 専用フォント。未設定ならタイトルフォントを使用'},
+  {key:'app_subtitle_color',    lbl:'サブタイトル文字色',         desc:'ホーム上部の app_subtitle の文字色。例: rgba(250,247,241,.35)', type:'color'},
+  {key:'app_subtitle_font_size',lbl:'サブタイトル文字サイズ',     desc:'ホーム上部の app_subtitle の文字サイズ。例: 11px'},
+  {key:'app_subtitle_font',     lbl:'サブタイトルフォント',       desc:'ホーム上部の app_subtitle 専用フォント。未設定なら本文フォントを使用'},
+];
+
 function getConfigDisplayDefs(){
   const areaStart = CONFIG_DEFS.findIndex((d,i)=>d.sec && CONFIG_DEFS[i+1]?.key === 'area_pref');
   if(areaStart < 0) return CONFIG_DEFS;
@@ -944,7 +955,9 @@ function getConfigDisplayDefs(){
   const out = [];
   CONFIG_DEFS.forEach((def, idx)=>{
     if(idx >= areaStart && idx < areaEnd) return;
+    if(def.key === 'header_image_id') return;
     out.push(def);
+    if(def.key === 'app_subtitle') out.push(...TITLE_STYLE_DEFS);
     if(def.key === 'area_name') out.push(...areaBlock);
   });
   return out;
@@ -1073,6 +1086,12 @@ function setCV(key,val){const ex=state.config.find(r=>r.key===key);if(ex)ex.valu
 function getCfg(key){
   const r=state.config.find(r=>r.key===key);
   return r?r.value:'';
+}
+
+function previewFontSize(val, fallback){
+  const m=String(val||'').trim().match(/^(\d+(?:\.\d+)?)px$/i);
+  if(!m) return val||fallback;
+  return Math.max(6, Math.round(parseFloat(m[1]) * 0.47)) + 'px';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1251,7 +1270,7 @@ function updateConfigPreview(){
   const title=getCfg('app_title')||'まち歩きガイド';
   const sub=getCfg('app_subtitle')||'';
   const headerType=getCfg('header_type');
-  const headerImg=getCfg('header_image_url')||getCfg('header_image_id');
+  const headerImg=getCfg('header_image_url');
 
   // Sample courses for preview
   const sampleCourses=state.courses.slice(0,3);
@@ -1268,6 +1287,12 @@ function updateConfigPreview(){
   const isLight = previewMode==='light';
   const textMain = isLight ? ink : '#FAF7F1';
   const textSoft = isLight ? muted : 'rgba(250,247,241,.4)';
+  const titleColor=getCfg('app_title_color')||textMain;
+  const titleSize=previewFontSize(getCfg('app_title_font_size'),'14px');
+  const titleFont=getCfg('app_title_font')||getCfg('font_title')||'Noto Serif JP';
+  const subColor=getCfg('app_subtitle_color')||textSoft;
+  const subSize=previewFontSize(getCfg('app_subtitle_font_size'),'7px');
+  const subFont=getCfg('app_subtitle_font')||getCfg('font_body')||'Noto Sans JP';
   const phoneBg = isLight ? bg : ink;
   const cardBg = isLight ? paper : 'rgba(255,255,255,.05)';
   const cardBorder = isLight ? border : 'rgba(255,255,255,.08)';
@@ -1296,9 +1321,9 @@ function updateConfigPreview(){
   badge.textContent='WALKING GUIDE';
 
   const ttl=document.createElement('div'); ttl.className='sim-title';
-  ttl.style.color=textMain; ttl.textContent=title;
+  ttl.style.color=titleColor; ttl.style.fontSize=titleSize; ttl.style.fontFamily=`'${titleFont}', serif`; ttl.textContent=title;
   const stl=document.createElement('div'); stl.className='sim-sub';
-  stl.style.color=textSoft; stl.textContent=sub;
+  stl.style.color=subColor; stl.style.fontSize=subSize; stl.style.fontFamily=`'${subFont}', sans-serif`; stl.textContent=sub;
 
   hdr.appendChild(badge); hdr.appendChild(ttl); hdr.appendChild(stl);
 
@@ -1804,7 +1829,7 @@ function exportCurrentSheet(){
 
 function exportSheet(sn){
   let csv;
-  if(sn==='config') csv='key,value\n'+state.config.map(r=>`${esc(r.key||'')},${esc(r.value||'')}`).join('\n');
+  if(sn==='config') csv='key,value\n'+cleanConfigRows(state.config).map(r=>`${esc(r.key||'')},${esc(r.value||'')}`).join('\n');
   else{const sc=SCHEMAS[sn]||(sn==='courses'?COURSE_FIELDS:null)||(sn==='course_spots'?[{key:'course_id'},{key:'spot_id'},{key:'order'}]:null);if(!sc)return;csv=buildCSV(sc.map(c=>c.key),state[sn]);}
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -1971,6 +1996,8 @@ const COLOR_FLASH_MAP = {
   color_gold:    ['.sim-prizes'],
   color_bg:      ['.sim-body'],
   color_paper:   ['.sim-course'],
+  app_title_color: ['.sim-title'],
+  app_subtitle_color: ['.sim-sub'],
 };
 
 function flashPreviewElement(key){
@@ -1993,8 +2020,8 @@ let labelOverlayActive = false;
 const LABEL_TARGETS = [
   {sel:'.sim-hdr',    key:'color_ink / header_type', pos:{top:'4px',left:'4px'}},
   {sel:'.sim-badge',  key:'home_badge_text / color_primary', pos:{top:'4px',left:'4px'}},
-  {sel:'.sim-title',  key:'app_title', pos:{bottom:'2px',left:'4px'}},
-  {sel:'.sim-sub',    key:'app_subtitle', pos:{bottom:'2px',left:'4px'}},
+  {sel:'.sim-title',  key:'app_title / app_title_color', pos:{bottom:'2px',left:'4px'}},
+  {sel:'.sim-sub',    key:'app_subtitle / app_subtitle_color', pos:{bottom:'2px',left:'4px'}},
   {sel:'.sim-body',   key:'color_bg (背景)', pos:{top:'4px',right:'4px'}},
   {sel:'.sim-prizes', key:'color_gold', pos:{top:'2px',left:'4px'}},
 ];
@@ -2092,7 +2119,7 @@ window.saveCurrentSheet = async function(){
 // ═══════════════════════════════════════════════════════
 // ⑦: FONT SIZE AUTO-PX
 // ═══════════════════════════════════════════════════════
-const PX_AUTO_KEYS = ['font_size_base','font_size_heading','font_size_explain','cert_title_font_size','cert_seal_size','cert_seal_text_size'];
+const PX_AUTO_KEYS = ['font_size_base','font_size_heading','font_size_explain','app_title_font_size','app_subtitle_font_size','cert_title_font_size','cert_seal_size','cert_seal_text_size'];
 
 function normalizePxValue(key, val){
   if(!PX_AUTO_KEYS.includes(key)) return val;
@@ -2136,17 +2163,20 @@ const JP_FONTS = [
   {name:'Sawarabi Mincho', label:'Sawarabi Mincho（さわらび明朝）'},
   {name:'Sawarabi Gothic', label:'Sawarabi Gothic（さわらびゴシック）'},
 ];
-const FONT_KEYS = ['font_title','font_body'];
+const FONT_KEYS = ['font_title','font_body','app_title_font','app_subtitle_font'];
 
 function mkFontPicker(key, cur, orig, rc, onChg){
   const wrap = document.createElement('div'); wrap.className='font-picker-wrap';
   const preview = document.createElement('div'); preview.className='font-preview'; preview.textContent='増田まち歩きガイド / MACHI ARUKI';
   if(cur) preview.style.fontFamily=`'${cur}', serif`;
+  if(cur) loadGoogleFont(cur);
 
   const sel = document.createElement('select'); sel.className='font-picker-sel';
   const defOpt = document.createElement('option'); defOpt.value=''; defOpt.textContent='── フォントを選択 ──'; sel.appendChild(defOpt);
   JP_FONTS.forEach(f=>{
     const o=document.createElement('option'); o.value=f.name; o.textContent=f.label;
+    o.style.fontFamily=`'${f.name}', sans-serif`;
+    loadGoogleFont(f.name);
     if(cur===f.name) o.selected=true;
     sel.appendChild(o);
   });
@@ -2164,6 +2194,7 @@ function mkFontPicker(key, cur, orig, rc, onChg){
   });
   inp.addEventListener('input',()=>{
     preview.style.fontFamily=inp.value?`'${inp.value}', serif`:'';
+    if(inp.value) loadGoogleFont(inp.value);
     onChg(inp.value);
   });
 
