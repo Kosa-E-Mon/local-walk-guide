@@ -1176,6 +1176,7 @@ function applyConfig() {
 
   // 証明書タイトル・印鑑デザイン（configから上書き可能）
   if (cfg.cert_title_font_family) {
+    loadGoogleFont(cfg.cert_title_font_family);
     r.style.setProperty('--cert-title-font-family', cfg.cert_title_font_family);
   }
   if (cfg.cert_title_font_size) {
@@ -1198,6 +1199,7 @@ function applyConfig() {
     r.style.setProperty('--cert-seal-bg', cfg.cert_seal_bg);
   }
   if (cfg.cert_seal_font_family) {
+    loadGoogleFont(cfg.cert_seal_font_family);
     r.style.setProperty('--cert-seal-font-family', cfg.cert_seal_font_family);
   }
   if (cfg.cert_seal_text_size) {

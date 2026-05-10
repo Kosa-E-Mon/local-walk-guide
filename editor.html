@@ -6,6 +6,7 @@
 <title>まち歩きガイド — データエディタ v4</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -300,6 +301,14 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 .font-picker-sel option{font-size:14px;padding:6px 8px;}
 .font-preview{font-size:12px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
+/* QR TOOLS */
+.hdr-qr .hdr-in{width:clamp(210px,24vw,340px);}
+.qr-modal{background:var(--surface);border-radius:10px;width:360px;box-shadow:var(--sh-lg);overflow:hidden;}
+.qr-preview{padding:18px 20px 12px;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.qr-box{width:240px;height:240px;background:#fff;border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;padding:14px;}
+.qr-url{width:100%;font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--muted);background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:8px;word-break:break-all;}
+.qr-actions{padding:12px 20px 18px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+
 /* v4.1 layout fixes */
 :root{--editor-font-size:13px;}
 html{height:100%;overflow:hidden;}
@@ -308,9 +317,11 @@ body{height:100dvh;overflow:hidden;}
 .hdr-field{min-width:0;}
 .hdr-in{width:clamp(180px,22vw,300px);}
 .hdr>.spacer{display:block;order:19;flex:0 0 100%;height:0;}
-.hdr-size{order:20;align-items:flex-start!important;}
-.hdr-csv-sep{order:21;}
-.hdr-export,.hdr button[onclick="exportAll()"]{order:22;}
+.hdr-qr{order:20;}
+.hdr-qr-btn{order:21;}
+.hdr-size{order:22;align-items:flex-start!important;}
+.hdr-csv-sep{order:23;}
+.hdr-export,.hdr button[onclick="exportAll()"]{order:24;}
 .main{min-height:0;}
 .ed-body{min-height:0;scrollbar-gutter:stable;}
 .cfg-split{width:min(100%,740px);max-width:740px;grid-template-columns:minmax(170px,.82fr) minmax(220px,1fr);overflow:auto;scrollbar-gutter:stable;}
@@ -357,6 +368,11 @@ table.dt{font-size:calc(var(--editor-font-size) - 2px);}
   <button class="btn btn-o btn-sm" onclick="testGas()">接続テスト</button>
   <button class="btn btn-blue btn-sm" onclick="showGasModal()">📋 GAS設定方法</button>
   <div class="spacer"></div>
+  <div class="hdr-field hdr-qr">
+    <div class="hdr-lbl">読み取り用スプレッドシートURL または ID</div>
+    <input class="hdr-in" id="qr-sheet-url" placeholder="空欄なら通常URL / ID入力で ?sid=... 付き">
+  </div>
+  <button class="btn btn-blue btn-sm hdr-qr-btn" onclick="showQrModal()">QR表示</button>
   <div class="hdr-field hdr-size" style="align-items:flex-end;">
     <div class="hdr-lbl">表示サイズ</div>
     <div class="size-toggle">
@@ -500,6 +516,26 @@ table.dt{font-size:calc(var(--editor-font-size) - 2px);}
 
 <div class="ld-mask" id="ld-mask"><div class="spinner"></div><div style="font-size:12px;color:var(--muted);" id="ld-txt">読み込み中…</div></div>
 <div class="notif" id="notif"></div>
+
+<!-- QR MODAL -->
+<div class="modal-bg" id="qr-modal">
+  <div class="qr-modal">
+    <div class="modal-hdr">
+      <span class="modal-title">QRコード</span>
+      <div class="spacer"></div>
+      <button class="btn btn-o btn-sm" onclick="closeQrModal()">✕ 閉じる</button>
+    </div>
+    <div class="qr-preview">
+      <div class="qr-box" id="qr-box"></div>
+      <div class="qr-url" id="qr-url"></div>
+    </div>
+    <div class="qr-actions">
+      <button class="btn btn-gold btn-sm" onclick="downloadQrPng()">PNGダウンロード</button>
+      <button class="btn btn-blue btn-sm" onclick="copyQrPng()">コピー</button>
+      <button class="btn btn-o btn-sm" onclick="copyQrUrl()">URLコピー</button>
+    </div>
+  </div>
+</div>
 
 <!-- DIFF CONFIRM MODAL -->
 <div class="modal-bg" id="diff-modal">
@@ -1858,6 +1894,94 @@ async function copyGasCode(){
   catch(e){notify('コピーに失敗しました。手動でコードを選択してコピーしてください',true);}
 }
 
+const APP_BASE_URL = 'https://kosa-e-mon.github.io/local-walk-guide/';
+
+function buildQrTargetUrl(){
+  const raw=(document.getElementById('qr-sheet-url')?.value||'').trim();
+  if(!raw) return APP_BASE_URL;
+  if(raw.startsWith(APP_BASE_URL)) return raw;
+  const sid=parseSheetId(raw);
+  if(sid) return APP_BASE_URL + '?sid=' + encodeURIComponent(sid);
+  if(/^https?:\/\//i.test(raw)) return raw;
+  return APP_BASE_URL + '?sid=' + encodeURIComponent(raw);
+}
+
+function showQrModal(){
+  const url=buildQrTargetUrl();
+  const box=document.getElementById('qr-box');
+  box.innerHTML='';
+  document.getElementById('qr-url').textContent=url;
+  if(typeof QRCode==='undefined'){
+    notify('QR生成ライブラリを読み込めませんでした。ネットワークを確認してください',true);
+    return;
+  }
+  new QRCode(box,{
+    text:url,
+    width:212,
+    height:212,
+    colorDark:'#000000',
+    colorLight:'#ffffff',
+    correctLevel:QRCode.CorrectLevel.M
+  });
+  document.getElementById('qr-modal').classList.add('show');
+}
+
+function closeQrModal(){document.getElementById('qr-modal').classList.remove('show');}
+
+function getQrCanvas(){
+  const box=document.getElementById('qr-box');
+  const canvas=box?.querySelector('canvas');
+  if(canvas) return canvas;
+  const img=box?.querySelector('img');
+  if(!img) return null;
+  const c=document.createElement('canvas');
+  c.width=img.naturalWidth||212; c.height=img.naturalHeight||212;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+  ctx.drawImage(img,0,0,c.width,c.height);
+  return c;
+}
+
+function qrFileName(){
+  const title=(getCfg('area_name')||getCfg('app_title')||'local-walk-guide').replace(/[\\/:*?"<>|]/g,'_').trim();
+  return (title||'local-walk-guide') + '_QR.png';
+}
+
+function downloadQrPng(){
+  const canvas=getQrCanvas();
+  if(!canvas){notify('先にQRコードを表示してください',true);return;}
+  const a=document.createElement('a');
+  a.href=canvas.toDataURL('image/png');
+  a.download=qrFileName();
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  notify('QRコードPNGをダウンロードしました');
+}
+
+async function copyQrPng(){
+  const canvas=getQrCanvas();
+  if(!canvas){notify('先にQRコードを表示してください',true);return;}
+  if(!navigator.clipboard || typeof ClipboardItem==='undefined'){
+    await copyQrUrl();
+    notify('画像コピーに未対応のためURLをコピーしました');
+    return;
+  }
+  canvas.toBlob(async blob=>{
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      notify('QRコード画像をコピーしました');
+    }catch(e){
+      await copyQrUrl();
+      notify('画像コピーに失敗したためURLをコピーしました');
+    }
+  },'image/png');
+}
+
+async function copyQrUrl(){
+  const url=document.getElementById('qr-url')?.textContent || buildQrTargetUrl();
+  try{await navigator.clipboard.writeText(url);notify('QRのURLをコピーしました');}
+  catch(e){notify('コピーに失敗しました',true);}
+}
+
 // ═══════════════════════════════════════════════════════
 // UI UTILITIES
 // ═══════════════════════════════════════════════════════
@@ -1878,6 +2002,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 document.getElementById('gas-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeGasModal();});
 document.getElementById('diff-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDiffModal();});
+document.getElementById('qr-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeQrModal();});
 
 // ═══════════════════════════════════════════════════════
 // A: RESIZE HANDLE — 右パネル幅をドラッグ調整
@@ -2163,7 +2288,7 @@ const JP_FONTS = [
   {name:'Sawarabi Mincho', label:'Sawarabi Mincho（さわらび明朝）'},
   {name:'Sawarabi Gothic', label:'Sawarabi Gothic（さわらびゴシック）'},
 ];
-const FONT_KEYS = ['font_title','font_body','app_title_font','app_subtitle_font'];
+const FONT_KEYS = ['font_title','font_body','app_title_font','app_subtitle_font','cert_title_font_family','cert_seal_font_family'];
 
 function mkFontPicker(key, cur, orig, rc, onChg){
   const wrap = document.createElement('div'); wrap.className='font-picker-wrap';
