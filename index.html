@@ -1569,7 +1569,12 @@ function bearing(la1,lo1,la2,lo2) {
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const screen = document.getElementById(id);
+  screen.classList.add('active');
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  screen.scrollTop = 0;
   if (id === 'screen-nav' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 100);
   // GA4 スクリーン計測
   trackScreen(id);
