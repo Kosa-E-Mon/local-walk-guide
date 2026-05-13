@@ -515,18 +515,18 @@ body {
 .prizes-header-title { font-family: var(--font-title); font-size: 22px; font-weight: 700; }
 .prizes-body { padding: 18px; flex: 1; overflow-y: auto; }
 .prizes-section-label { font-size: 10px; color: var(--muted); letter-spacing: .2em; text-transform: uppercase; margin-bottom: 9px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
-.prize-card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 15px; margin-bottom: 9px; display: flex; align-items: center; gap: 11px; position: relative; overflow: hidden; }
+.prize-card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 11px; position: relative; overflow: hidden; }
 .prize-card.completed { border-color: var(--gold); }
 .prize-card.locked { opacity: .55; }
 .prize-card-bar { position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--gold); border-radius: var(--radius) 0 0 var(--radius); }
 .prize-card-icon { font-size: 28px; flex-shrink: 0; }
 .prize-card-info { flex: 1; }
 .prize-card-name { font-family: var(--font-title); font-size: 14px; font-weight: 600; margin-bottom: 2px; }
-.prize-card-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
-.prize-card-date { font-size: 10px; color: var(--gold); margin-top: 3px; }
+.prize-card-desc { font-size: 12px; color: var(--muted); line-height: 1.65; }
+.prize-card-date { font-size: 12px; color: var(--gold); margin-top: 4px; }
 .prize-card-status { flex-shrink: 0; text-align: center; }
 .prize-status-icon { font-size: 20px; }
-.prize-status-label { font-size: 9px; color: var(--muted); margin-top: 2px; }
+.prize-status-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
 .empty-prizes { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; line-height: 2.0; }
 .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: .3; }
 .btn-back { margin: 0 20px 24px; background: var(--ink); color: var(--paper); border: none; padding: 13px; font-family: var(--font-title); font-size: 13px; letter-spacing: .12em; border-radius: var(--radius); cursor: pointer; width: calc(100% - 40px); }
@@ -571,15 +571,15 @@ body {
 }
 .stamp-icon { font-size: 28px; position: relative; z-index: 1; }
 .stamp-icon.locked-icon { font-size: 20px; opacity: .2; }
-.stamp-date-in { font-size: 9px; color: var(--primary); letter-spacing: .06em; font-family: var(--font-title); position: relative; z-index: 1; line-height: 1.3; text-align: center; }
-.stamp-name { font-family: var(--font-title); font-size: 11px; font-weight: 600; color: var(--ink); text-align: center; line-height: 1.4; max-width: 110px; }
+.stamp-date-in { font-size: 10px; color: var(--primary); letter-spacing: .06em; font-family: var(--font-title); position: relative; z-index: 1; line-height: 1.3; text-align: center; }
+.stamp-name { font-family: var(--font-title); font-size: 12px; font-weight: 600; color: var(--ink); text-align: center; line-height: 1.45; max-width: 122px; }
 .stamp-name.locked-name { color: var(--muted); opacity: .4; }
-.stamp-where { font-size: 9px; color: var(--muted); text-align: center; }
+.stamp-where { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.45; }
 .stamps-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; line-height: 2.0; }
 .stamps-total { text-align: center; margin-top: 16px; font-size: 11px; color: var(--muted); letter-spacing: .1em; }
 .stamps-total span { font-family: var(--font-title); font-size: 18px; font-weight: 700; color: var(--primary); margin: 0 2px; }
 /* プライズカード「どこで」 */
-.prize-card-where { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.prize-card-where { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
 /* プライズヘッダータブ */
 .prizes-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,.1); margin-top: 10px; }
 .prizes-tab { flex: 1; padding: 8px; text-align: center; font-size: 11px; letter-spacing: .1em; color: rgba(250,247,241,.35); cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; }
@@ -590,8 +590,8 @@ body {
 .prizes-filter-chip.active { background: rgba(154,122,58,.2); border-color: var(--gold); color: var(--gold); }
 /* 地域グループラベル */
 .prizes-location-group { margin-top: 14px; margin-bottom: 6px; }
-.prizes-location-pref { font-size: 9px; color: rgba(250,247,241,.25); letter-spacing: .2em; }
-.prizes-location-city { font-size: 11px; color: rgba(250,247,241,.45); letter-spacing: .12em; font-weight: 500; margin-top: 1px; }
+.prizes-location-pref { font-size: 10px; color: rgba(250,247,241,.32); letter-spacing: .2em; }
+.prizes-location-city { font-size: 12px; color: rgba(250,247,241,.55); letter-spacing: .12em; font-weight: 500; margin-top: 1px; }
 
 /* ══ カスタムモーダル ══ */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(28,26,22,.78); z-index: 9999; align-items: center; justify-content: center; padding: 24px; }
@@ -673,7 +673,7 @@ body {
   <div class="cloud-bar" id="cloud-bar">
     <div class="cloud-login-area" id="cloud-login-area">
       <button class="btn-cloud-login" onclick="signIn()">☁ Googleでバックアップ</button>
-      <div class="cloud-login-hint">プライズ・履歴をクラウドに保存<br>機種変更時に復元できます</div>
+      <div class="cloud-login-hint">御朱印帳・履歴をクラウドに保存<br>機種変更時に復元できます</div>
     </div>
     <div class="cloud-user-area" id="cloud-user-area">
       <div class="cloud-dot idle" id="cloud-status-dot"></div>
@@ -846,7 +846,7 @@ body {
         <!-- ボタン -->
         <div class="cert-sho-buttons">
           <button class="cert-sho-btn-download" onclick="downloadCertificate()">証明書を保存する</button>
-          <button class="cert-sho-btn-primary" onclick="showScreen('screen-prizes');switchPrizesTab('prizes')">🏅 プライズを確認する</button>
+          <button class="cert-sho-btn-primary" onclick="showScreen('screen-prizes');switchPrizesTab('prizes')">🏮 御朱印帳を確認する</button>
           <button class="cert-sho-btn-secondary" onclick="goHome()">コース選択に戻る</button>
         </div>
       </div>
@@ -854,13 +854,13 @@ body {
   </div>
 </div>
 
-<!-- ⑦ プライズ -->
+<!-- ⑦ 御朱印帳 -->
 <div id="screen-prizes" class="screen">
   <div class="prizes-header">
-    <div class="prizes-header-badge">MY PRIZES</div>
-    <div class="prizes-header-title">獲得プライズ</div>
+    <div class="prizes-header-badge">GOSHUIN BOOK</div>
+    <div class="prizes-header-title">御朱印帳</div>
     <div class="prizes-tabs">
-      <div class="prizes-tab active" id="tab-prizes" onclick="switchPrizesTab('prizes')">🏅 プライズ</div>
+      <div class="prizes-tab active" id="tab-prizes" onclick="switchPrizesTab('prizes')">🏮 一覧</div>
       <div class="prizes-tab" id="tab-stamps" onclick="switchPrizesTab('stamps')">🔖 御朱印帳</div>
     </div>
   </div>
@@ -938,12 +938,29 @@ function lsGet(key, def) { try { return JSON.parse(localStorage.getItem(key) ?? 
 function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
 function loadPrizes() { return lsGet('lwg_prizes', {}); }
-function savePrize(id, date, area, course) {
+function coursePrizeId(courseOrId, sheetId = currentSheetId) {
+  const courseId = typeof courseOrId === 'object' ? courseOrId.course_id : courseOrId;
+  return `course_${sheetId}_${courseId}`;
+}
+function legacyPrizeId(courseOrId) {
+  const courseId = typeof courseOrId === 'object' ? courseOrId.course_id : courseOrId;
+  return 'course_' + courseId;
+}
+function prizeForCourse(prizes, course) {
+  const scoped = prizes[coursePrizeId(course)];
+  if (scoped) return scoped;
+  // 旧保存形式は地域IDを持たないため、既定地域だけの救済として読む。
+  return currentSheetId === DEFAULT_SHEET_ID ? prizes[legacyPrizeId(course)] : null;
+}
+function savePrize(id, date, area, course, courseId = '') {
   const p = loadPrizes();
   p[id] = {
     date, area: area || '', course: course || '',
+    course_id: courseId || '',
+    sheet_id: currentSheetId || '',
     prefecture: cfg.prefecture || '',
-    city: cfg.city || ''
+    city: cfg.city || '',
+    area_name: cfg.area_name || area || ''
   };
   lsSet('lwg_prizes', p);
 }
@@ -953,6 +970,7 @@ function prizeArea(val) { return (val && typeof val === 'object') ? (val.area ||
 function prizeCourse(val) { return (val && typeof val === 'object') ? (val.course || '') : ''; }
 function prizePref(val) { return (val && typeof val === 'object') ? (val.prefecture || '') : ''; }
 function prizeCity(val) { return (val && typeof val === 'object') ? (val.city || '') : ''; }
+function prizeAreaName(val) { return (val && typeof val === 'object') ? (val.area_name || val.area || '') : ''; }
 
 // ── 生涯歩行いいねカウンター ──
 function loadLifetimeWalk() { return lsGet('lwg_lifetime_walk_m', 0); }
@@ -1426,7 +1444,7 @@ function renderHome() {
   const btnPrizes = document.createElement('button');
   btnPrizes.className = 'btn-prizes-home';
   btnPrizes.style.marginTop = '14px';
-  btnPrizes.textContent = '🏅 プライズ・御朱印帳を見る';
+  btnPrizes.textContent = '🏮 御朱印帳を見る';
   btnPrizes.onclick = () => { showScreen('screen-prizes'); switchPrizesTab('prizes'); };
   body.appendChild(btnPrizes);
 
@@ -1445,8 +1463,7 @@ function sectionLabel(text) {
 }
 
 function makeCourseCard(course, prizes) {
-  const prizeId = 'course_' + course.course_id;
-  const done = !!prizes[prizeId];
+  const done = !!prizeForCourse(prizes, course);
   const card = document.createElement('div');
   card.className = 'course-card' + (course.recommended ? ' recommended' : '') + (done ? ' completed' : '');
 
@@ -2308,7 +2325,7 @@ function nextSpot() {
     stopGPS();
     clearProgress();
     creditWalk(totalWalkDist); // 完走時に残り歩行距離を加算
-    savePrize('course_'+currentCourse.course_id, new Date().toISOString(), cfg.area_name || cfg.app_title || '', currentCourse.course_name);
+    savePrize(coursePrizeId(currentCourse), new Date().toISOString(), cfg.area_name || cfg.app_title || '', currentCourse.course_name, currentCourse.course_id);
     showGoal();
     return;
   }
@@ -2554,23 +2571,37 @@ function renderPrizes() {
   const body = document.getElementById('prizes-body'); body.innerHTML='';
   const filterEl = document.getElementById('prizes-filter'); if (filterEl) filterEl.innerHTML='';
 
-  // 全コースをprize情報と紐付け
-  const items = allCourses.map(c => {
-    const pid = 'course_'+c.course_id;
-    const val = prizes[pid];
+  // 獲得済みは保存データから積み上げ、未達成は現在の地域コースだけ出す
+  const savedItems = Object.entries(prizes).map(([pid, val]) => {
+    const name = prizeCourse(val) || allCourses.find(c => pid === coursePrizeId(c) || pid === legacyPrizeId(c))?.course_name || 'まち歩きコース';
+    return {
+      id: pid, name, icon: '🏮', desc: `${name}を完走`,
+      done: !!prizeDate(val),
+      date: prizeDate(val),
+      area: prizeArea(val),
+      pref: prizePref(val),
+      city: prizeCity(val),
+      areaName: prizeAreaName(val)
+    };
+  }).filter(i => i.done);
+
+  const lockedItems = allCourses.filter(c => !prizeForCourse(prizes, c)).map(c => {
+    const pid = coursePrizeId(c);
     return {
       id: pid, name: c.course_name, icon: '🏮', desc: `${c.course_name}を完走`,
-      done: !!val,
-      date: val ? prizeDate(val) : null,
-      area: val ? prizeArea(val) : '',
-      pref: val ? prizePref(val) : '',
-      city: val ? prizeCity(val) : ''
+      done: false,
+      date: null,
+      area: '',
+      pref: '',
+      city: '',
+      areaName: ''
     };
   });
+  const items = [...savedItems, ...lockedItems];
 
   // フィルターチップを生成（取得済みのものから地域を抽出）
   const completedItems = items.filter(i => i.done);
-  const locationKeys = [...new Set(completedItems.map(i => [i.pref, i.city].filter(Boolean).join(' ') || i.area || ''))].filter(Boolean);
+  const locationKeys = [...new Set(completedItems.map(i => [i.pref, i.city, i.areaName].filter(Boolean).join(' ') || i.area || ''))].filter(Boolean);
 
   if (filterEl && locationKeys.length > 1) {
     const allChip = makeFilterChip('すべて', 'all');
@@ -2579,39 +2610,24 @@ function renderPrizes() {
   }
 
   if (items.length === 0) {
-    body.innerHTML=`<div class="empty-prizes"><div class="empty-icon">🏅</div>まだプライズはありません。<br>まち歩きを完走すると獲得できます。</div>`;
+    body.innerHTML=`<div class="empty-prizes"><div class="empty-icon">🏮</div>まだ御朱印はありません。<br>まち歩きを完走すると獲得できます。</div>`;
     return;
   }
 
   // フィルター適用
   const filtered = prizeLocationFilter === 'all' ? items : items.map(i => {
-    const locKey = [i.pref, i.city].filter(Boolean).join(' ') || i.area || '';
+    const locKey = [i.pref, i.city, i.areaName].filter(Boolean).join(' ') || i.area || '';
     return (i.done && locKey === prizeLocationFilter) ? i : { ...i, done: false, _hidden: !i.done };
   });
 
   // 完了・未達成に分けてグループ表示
-  const completed = filtered.filter(i => i.done);
+  const completed = filtered.filter(i => i.done).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   const locked    = filtered.filter(i => !i.done && !i._hidden);
 
   if (completed.length > 0) {
-    // 地域グループ化
-    const groups = new Map();
-    completed.forEach(p => {
-      const gKey = [p.pref, p.city].filter(Boolean).join(' ') || p.area || '取得済み';
-      if (!groups.has(gKey)) groups.set(gKey, []);
-      groups.get(gKey).push(p);
-    });
     const lbl = document.createElement('div'); lbl.className='prizes-section-label';
     lbl.textContent = `COMPLETED — ${completed.length}件`; body.appendChild(lbl);
-    groups.forEach((groupItems, gKey) => {
-      if (groups.size > 1) {
-        const glbl = document.createElement('div'); glbl.className='prizes-location-group';
-        const parts = gKey.split(' ');
-        glbl.innerHTML = `<div class="prizes-location-pref">${parts[0]||''}</div><div class="prizes-location-city">${parts[1]||gKey}</div>`;
-        body.appendChild(glbl);
-      }
-      groupItems.forEach(p => body.appendChild(makePrizeCard(p, true)));
-    });
+    completed.forEach(p => body.appendChild(makePrizeCard(p, true)));
   }
   if (locked.length > 0) {
     const lbl = document.createElement('div'); lbl.className='prizes-section-label';
@@ -2642,7 +2658,7 @@ function makePrizeCard(prize, done) {
     </div>
     <div class="prize-card-status">
       <div class="prize-status-icon">${done?'🥇':'🔒'}</div>
-      <div class="prize-status-label">${done?'獲得済み':'未達成'}</div>
+      <div class="prize-status-label">${done?'授与済み':'未達成'}</div>
     </div>`;
   return card;
 }
@@ -2654,8 +2670,14 @@ function renderStamps() {
   const prizes = loadPrizes();
   const body = document.getElementById('prizes-body'); body.innerHTML='';
 
-  const completedCount = allCourses.filter(c => !!prizes['course_'+c.course_id]).length;
-  const totalCount = allCourses.length;
+  const savedStamps = Object.entries(prizes).map(([pid, val]) => {
+    const name = prizeCourse(val) || allCourses.find(c => pid === coursePrizeId(c) || pid === legacyPrizeId(c))?.course_name || 'まち歩きコース';
+    return { name, val, done: !!prizeDate(val) };
+  }).filter(i => i.done);
+  const lockedStamps = allCourses.filter(c => !prizeForCourse(prizes, c)).map(c => ({ name: c.course_name, val: null, done: false }));
+  const stampItems = [...savedStamps, ...lockedStamps].sort((a, b) => new Date(prizeDate(b.val) || 0) - new Date(prizeDate(a.val) || 0));
+  const completedCount = savedStamps.length;
+  const totalCount = stampItems.length;
 
   if (totalCount === 0) {
     body.innerHTML=`<div class="stamps-empty"><div class="empty-icon">🔖</div>コースデータがありません。</div>`;
@@ -2665,10 +2687,9 @@ function renderStamps() {
   const book = document.createElement('div'); book.className='stamps-book';
   const grid = document.createElement('div'); grid.className='stamps-grid';
 
-  allCourses.forEach(c => {
-    const pid = 'course_'+c.course_id;
-    const val = prizes[pid];
-    const done = !!val;
+  stampItems.forEach(stamp => {
+    const val = stamp.val;
+    const done = stamp.done;
     const date = done ? prizeDate(val) : null;
     const area = done ? prizeArea(val) : '';
     const d = date ? new Date(date) : null;
@@ -2682,7 +2703,7 @@ function renderStamps() {
              <div class="stamp-date-in">${dateStr}</div>`
           : `<div class="stamp-icon locked-icon">🔒</div>`}
       </div>
-      <div class="stamp-name ${done?'':'locked-name'}">${c.course_name}</div>
+      <div class="stamp-name ${done?'':'locked-name'}">${stamp.name}</div>
       ${done && area ? `<div class="stamp-where">📍 ${area}</div>` : ''}
     `;
     grid.appendChild(item);
