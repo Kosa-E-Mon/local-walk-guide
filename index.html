@@ -282,19 +282,23 @@ body {
 .nav-spot-name { font-family: var(--font-title); font-size: 20px; font-weight: 700; color: var(--ink); }
 
 /* 距離パネル */
-.distance-panel { margin: 10px 20px 0; background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 12px; transition: border-color .4s, background .4s; }
-.distance-panel.near { border-color: #f0a040; background: #fffbf0; }
-.distance-panel.arrived { border-color: var(--green); background: #f0fff4; }
+.distance-panel { margin: 10px 20px 0; background: #fffdf7; border: 1px solid #b7aa90; border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 3px 12px rgba(28,26,22,.08); transition: border-color .4s, background .4s, box-shadow .4s; }
+.distance-panel.near { border-color: #c87020; background: #fff7e5; box-shadow: 0 4px 16px rgba(200,112,32,.16); }
+.distance-panel.arrived { border-color: var(--green); background: #effff3; box-shadow: 0 4px 16px rgba(58,122,74,.16); }
 .dist-icon { font-size: 24px; }
 .dist-info { flex: 1; }
-.dist-number { font-family: var(--font-title); font-size: 24px; font-weight: 700; color: var(--ink); line-height: 1; }
-.dist-number span { font-size: 11px; font-weight: 400; margin-left: 2px; color: var(--muted); }
-.dist-status { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: .04em; }
-.ring-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
-.ring-svg { transform: rotate(-90deg); }
-.ring-bg { fill: none; stroke: var(--border); stroke-width: 4; }
-.ring-fill { fill: none; stroke: var(--primary); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 113; stroke-dashoffset: 113; transition: stroke-dashoffset .6s ease, stroke .4s; }
-.ring-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: var(--muted); }
+.dist-number { font-family: var(--font-title); font-size: 28px; font-weight: 900; color: #0b0a08; line-height: .95; letter-spacing: .03em; text-shadow: 0 1px 0 #fff, 0 0 1px rgba(28,26,22,.7); }
+.dist-number span { font-size: 12px; font-weight: 800; margin-left: 3px; color: #3b352b; }
+.dist-status { font-size: 10px; color: #5d5346; margin-top: 4px; letter-spacing: .04em; font-weight: 600; }
+.ring-wrap { position: relative; width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%; background: radial-gradient(circle, #fffef8 45%, #efe4cf 46%, #fffaf0 68%); box-shadow: inset 0 0 0 1px rgba(28,26,22,.08), 0 2px 8px rgba(28,26,22,.12); }
+.ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+.ring-bg { fill: none; stroke: #c8b992; stroke-width: 4; }
+.ring-fill { fill: none; stroke: var(--primary); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 113; stroke-dashoffset: 113; transition: stroke-dashoffset .6s ease, stroke .4s; filter: drop-shadow(0 0 2px rgba(184,50,50,.35)); }
+.ring-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #1c1a16; font-weight: 800; letter-spacing: .02em; }
+.distance-panel.near .ring-wrap { animation: distancePulse var(--distance-pulse-speed, 1.6s) ease-in-out infinite; }
+.distance-panel.arrived .ring-wrap { animation: distancePulse .95s ease-in-out infinite; }
+@keyframes distancePulse { 0%,100%{transform:scale(1); box-shadow: inset 0 0 0 1px rgba(28,26,22,.08), 0 2px 8px rgba(28,26,22,.12)} 50%{transform:scale(1.045); box-shadow: inset 0 0 0 1px rgba(28,26,22,.1), 0 0 0 5px rgba(184,50,50,.08), 0 4px 14px rgba(184,50,50,.18)} }
+@media (prefers-reduced-motion: reduce) { .distance-panel.near .ring-wrap, .distance-panel.arrived .ring-wrap { animation: none; } }
 
 /* 歩行距離 */
 .walk-bar { margin: 8px 20px 0; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
@@ -409,9 +413,27 @@ body {
 
 /* ══ 修了書（賞状スタイル） ══ */
 #screen-goal { background: #2A2218; overflow-y: auto; }
-.cert-sho-wrap { min-height: 100vh; padding: 24px 16px 40px; display: flex; align-items: flex-start; justify-content: center; }
-.cert-sho { width: 100%; max-width: 440px; background: #FBF5E8; position: relative; border: 3px solid #9A7A3A; box-shadow: 0 0 0 6px #FBF5E8, 0 0 0 8px #9A7A3A, 0 8px 32px rgba(0,0,0,.5); }
-.cert-sho-inner { padding: 28px 24px 32px; }
+.cert-sho-wrap { min-height: 100vh; padding: 24px 16px 40px; display: flex; align-items: flex-start; justify-content: center; position: relative; overflow: hidden; }
+.cert-sho-wrap::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .32;
+  background:
+    radial-gradient(ellipse at 12% 16%, rgba(251,218,214,.7) 0 2px, transparent 3px),
+    radial-gradient(ellipse at 76% 10%, rgba(251,218,214,.58) 0 2px, transparent 3px),
+    radial-gradient(ellipse at 62% 48%, rgba(251,218,214,.42) 0 2px, transparent 3px),
+    radial-gradient(ellipse at 28% 74%, rgba(251,218,214,.5) 0 2px, transparent 3px);
+  background-size: 220px 260px; animation: certPetals 18s linear infinite;
+}
+.cert-sho { width: 100%; max-width: 440px; background: #FBF5E8; position: relative; border: 3px solid #9A7A3A; box-shadow: 0 0 0 6px #FBF5E8, 0 0 0 8px #9A7A3A, 0 8px 32px rgba(0,0,0,.5); overflow: hidden; }
+.cert-sho::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .42;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(122,92,52,.08) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 82% 36%, rgba(122,92,52,.07) 0 1px, transparent 1.5px),
+    repeating-linear-gradient(12deg, rgba(122,92,52,.035) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(96deg, rgba(255,255,255,.32) 0 1px, transparent 1px 11px);
+}
+.cert-sho-inner { padding: 28px 24px 32px; position: relative; z-index: 1; }
+@keyframes certPetals { from{background-position: 0 -260px} to{background-position: 80px 260px} }
 /* 四隅の飾り */
 .cert-sho-corner { position: absolute; width: 24px; height: 24px; }
 .cert-sho-corner.tl { top: 10px; left: 10px; border-top: 2px solid #C9A85C; border-left: 2px solid #C9A85C; }
@@ -459,7 +481,6 @@ body {
   border-style: double;
   background: var(--cert-seal-bg, rgba(184,50,50,.04));
 }
-background: rgba(184,50,50,.04); }
 .cert-sho-seal-text {
   font-family: var(--cert-seal-font-family, var(--font-title));
   font-size: var(--cert-seal-text-size, 10px);
@@ -472,6 +493,20 @@ background: rgba(184,50,50,.04); }
 .cert-sho-btn-primary:active { opacity: .8; }
 .cert-sho-btn-secondary { background: transparent; border: 1px solid #D4C9B0; color: #9A7A5A; padding: 11px; font-size: 12px; letter-spacing: .1em; border-radius: 4px; cursor: pointer; width: 100%; }
 .cert-sho-screenshot { font-size: 10px; color: #B8A890; text-align: center; margin-bottom: 10px; letter-spacing: .06em; }
+.cert-sho-seal { position: relative; display: flex; align-items: center; justify-content: center; transform-origin: center; }
+.cert-sho.goal-animate .cert-sho-seal { animation: certStamp .72s cubic-bezier(.2,1.25,.25,1) .28s both; }
+.cert-sho-seal::after { content: ""; position: absolute; inset: -8px; border-radius: 50%; opacity: 0; background: radial-gradient(circle, rgba(184,50,50,.18), rgba(184,50,50,.06) 42%, transparent 70%); transform: scale(.65); pointer-events: none; }
+.cert-sho.goal-animate .cert-sho-seal::after { animation: certInkBleed 1.2s ease-out .45s both; }
+.cert-sho-seal-text { text-align: center; }
+@keyframes certStamp { 0%{opacity:0; transform:scale(1.65) rotate(-7deg)} 55%{opacity:1; transform:scale(.9) rotate(1deg)} 78%{transform:scale(1.04) rotate(0)} 100%{transform:scale(1) rotate(0)} }
+@keyframes certInkBleed { 0%{opacity:.6; transform:scale(.58)} 100%{opacity:0; transform:scale(1.28)} }
+.cert-sho-btn-primary, .cert-sho-btn-download, .cert-sho-btn-secondary { position: relative; overflow: hidden; transition: transform .16s, opacity .2s; }
+.cert-sho-btn-primary:active, .cert-sho-btn-download:active, .cert-sho-btn-secondary:active { transform: translateY(1px) scale(.99); }
+.cert-sho-btn-primary::after, .cert-sho-btn-download::after, .cert-sho-btn-secondary::after { content: ""; position: absolute; inset: 50% auto auto 50%; width: 18px; height: 18px; border-radius: 50%; background: rgba(184,50,50,.16); opacity: 0; transform: translate(-50%,-50%) scale(.4); }
+.cert-sho-btn-primary:active::after, .cert-sho-btn-download:active::after, .cert-sho-btn-secondary:active::after { animation: certButtonInk .48s ease-out; }
+.cert-sho-btn-download { background: #B83232; color: white; border: none; padding: 13px; font-family: var(--font-title); font-size: 13px; letter-spacing: .12em; border-radius: 4px; cursor: pointer; width: 100%; }
+@keyframes certButtonInk { 0%{opacity:.5; transform:translate(-50%,-50%) scale(.4)} 100%{opacity:0; transform:translate(-50%,-50%) scale(12)} }
+@media (prefers-reduced-motion: reduce) { .cert-sho-wrap::before, .cert-sho.goal-animate .cert-sho-seal, .cert-sho.goal-animate .cert-sho-seal::after { animation: none; } }
 
 /* ══ PRIZES ══ */
 #screen-prizes { background: var(--bg); }
@@ -810,6 +845,7 @@ background: rgba(184,50,50,.04); }
         <div class="cert-sho-screenshot">📸 スクリーンショットで記念に保存できます</div>
         <!-- ボタン -->
         <div class="cert-sho-buttons">
+          <button class="cert-sho-btn-download" onclick="downloadCertificate()">証明書を保存する</button>
           <button class="cert-sho-btn-primary" onclick="showScreen('screen-prizes');switchPrizesTab('prizes')">🏅 プライズを確認する</button>
           <button class="cert-sho-btn-secondary" onclick="goHome()">コース選択に戻る</button>
         </div>
@@ -938,12 +974,30 @@ function updateLikeBar() {
 }
 
 // ── ホーム画面テーマ切替 ──
+const HOME_THEME_KEY = 'lwg_home_theme';
+let homeThemeAutoStarted = false;
+
+function isNightHours() {
+  const hour = new Date().getHours();
+  return hour >= 17 || hour < 6;
+}
+
+function getSystemHomeTheme() {
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return (prefersDark || isNightHours()) ? 'dark' : 'light';
+}
+
+function getStoredHomeTheme() {
+  const stored = localStorage.getItem(HOME_THEME_KEY);
+  return stored === 'light' || stored === 'dark' ? stored : null;
+}
+
 function getHomeTheme() {
-  return localStorage.getItem('lwg_home_theme') || cfg.home_theme_default || 'dark';
+  return getStoredHomeTheme() || getSystemHomeTheme();
 }
 
 function setHomeTheme(mode) {
-  localStorage.setItem('lwg_home_theme', mode);
+  localStorage.setItem(HOME_THEME_KEY, mode);
   applyHomeTheme(mode);
 }
 
@@ -951,6 +1005,23 @@ function toggleHomeTheme() {
   const current = getHomeTheme();
   const next = current === 'light' ? 'dark' : 'light';
   setHomeTheme(next);
+}
+
+function initHomeThemeAuto() {
+  applyHomeTheme(getHomeTheme());
+  if (homeThemeAutoStarted) return;
+  homeThemeAutoStarted = true;
+
+  if (window.matchMedia) {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => { if (!getStoredHomeTheme()) applyHomeTheme(getSystemHomeTheme()); };
+    if (media.addEventListener) media.addEventListener('change', onChange);
+    else if (media.addListener) media.addListener(onChange);
+  }
+
+  setInterval(() => {
+    if (!getStoredHomeTheme()) applyHomeTheme(getSystemHomeTheme());
+  }, 10 * 60 * 1000);
 }
 
 function applyHomeTheme(mode) {
@@ -1252,7 +1323,7 @@ function applyConfig() {
     applyHeaderStyle();
   }
 
-  applyHomeTheme(getHomeTheme());
+  initHomeThemeAuto();
 }
 
 // ── エリア表示ラベル生成 ──
@@ -1888,23 +1959,26 @@ function updateDistanceUI(dist, spot) {
   const panel = document.getElementById('distance-panel');
   document.getElementById('dist-number').innerHTML = `${dist}<span>m</span>`;
   const ratio = Math.min(1,(500-dist)/500);
-  document.getElementById('ring-fill').style.strokeDashoffset = 113-(ratio*113);
+  const ringFill = document.getElementById('ring-fill');
+  ringFill.style.strokeDashoffset = 113-(ratio*113);
   document.getElementById('ring-label').textContent = dist<=999?dist+'m':'遠';
   panel.classList.remove('near','arrived');
+  panel.style.removeProperty('--distance-pulse-speed');
   if (dist <= spot.arrive_dist) {
     panel.classList.add('arrived');
     document.getElementById('dist-icon').textContent='🎯';
     document.getElementById('dist-status').textContent='到着しました！';
-    document.getElementById('ring-fill').style.stroke='var(--green)';
+    ringFill.style.stroke='var(--green)';
   } else if (dist <= spot.approach_dist) {
     panel.classList.add('near');
     document.getElementById('dist-icon').textContent='🏃';
     document.getElementById('dist-status').textContent=`もうすぐです！（到着判定: ${spot.arrive_dist}m以内）`;
-    document.getElementById('ring-fill').style.stroke='#f0a040';
+    panel.style.setProperty('--distance-pulse-speed', dist <= spot.arrive_dist * 2 ? '1.05s' : '1.45s');
+    ringFill.style.stroke='#c87020';
   } else {
     document.getElementById('dist-icon').textContent='🚶';
     document.getElementById('dist-status').textContent=`${spot.spot_name} まで（到着判定: ${spot.arrive_dist}m以内）`;
-    document.getElementById('ring-fill').style.stroke='var(--primary)';
+    ringFill.style.stroke='var(--primary)';
   }
 }
 
@@ -2094,6 +2168,7 @@ function updateNavScreen() {
   document.getElementById('ring-fill').style.strokeDashoffset=113;
   document.getElementById('ring-label').textContent='--';
   document.getElementById('distance-panel').className='distance-panel';
+  document.getElementById('distance-panel').style.removeProperty('--distance-pulse-speed');
   document.getElementById('btn-ar').classList.remove('show');
   updateArrivedButton();
 }
@@ -2294,6 +2369,12 @@ function showGoal() {
   });
 
   showScreen('screen-goal');
+  const cert = document.querySelector('.cert-sho');
+  if (cert) {
+    cert.classList.remove('goal-animate');
+    void cert.offsetWidth;
+    cert.classList.add('goal-animate');
+  }
 
   // GA4: コース完走イベント
   trackEvent('course_complete', {
@@ -2325,6 +2406,137 @@ function showGoal() {
 // ══════════════════════════════════════
 // プライズ・御朱印帳タブ切り替え
 // ══════════════════════════════════════
+function certText(id, fallback='') {
+  const el = document.getElementById(id);
+  return el ? el.textContent.trim() || fallback : fallback;
+}
+
+function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
+  const chars = [...text];
+  let line = '';
+  chars.forEach(ch => {
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      line = ch;
+      y += lineHeight;
+    } else {
+      line = test;
+    }
+  });
+  if (line) ctx.fillText(line, x, y);
+  return y + lineHeight;
+}
+
+function downloadCertificate() {
+  const canvas = document.createElement('canvas');
+  const w = 1200, h = 1700;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const course = certText('cert-course', currentCourse?.course_name || '');
+  const title = certText('cert-sho-title', '修了証');
+  const date = certText('cert-date');
+  const issuer = certText('cert-issuer', cfg.area_name || '');
+  const seal = certText('cert-seal-text', '済');
+  const dist = certText('cert-dist', '0');
+  const like = certText('cert-like', '0');
+  const count = certText('cert-count', String(courseSpots.length));
+
+  ctx.fillStyle = '#2A2218';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#FBF5E8';
+  ctx.fillRect(90, 90, w - 180, h - 180);
+
+  ctx.globalAlpha = .22;
+  for (let i = 0; i < 1700; i += 9) {
+    ctx.strokeStyle = i % 27 === 0 ? '#d8c8a4' : '#fffdf5';
+    ctx.beginPath();
+    ctx.moveTo(90, 90 + i);
+    ctx.lineTo(w - 90, 94 + i);
+    ctx.stroke();
+  }
+  for (let i = 0; i < 700; i++) {
+    const x = 110 + ((i * 73) % (w - 220));
+    const y = 110 + ((i * 47) % (h - 220));
+    ctx.fillStyle = i % 2 ? '#8c6f3f' : '#ffffff';
+    ctx.fillRect(x, y, 1.2, 1.2);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.strokeStyle = '#9A7A3A';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(105, 105, w - 210, h - 210);
+  ctx.lineWidth = 3;
+  ctx.strokeRect(135, 135, w - 270, h - 270);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#2A1A0A';
+  ctx.font = 'bold 82px serif';
+  ctx.fillText(title, w / 2, 260);
+
+  ctx.strokeStyle = '#9A7A3A';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(240, 315); ctx.lineTo(960, 315); ctx.stroke();
+
+  ctx.fillStyle = '#9A7A3A';
+  ctx.font = '28px sans-serif';
+  ctx.fillText('COURSE', w / 2, 390);
+  ctx.fillStyle = '#2A1A0A';
+  ctx.font = 'bold 44px serif';
+  drawWrappedText(ctx, course, w / 2, 455, 780, 58);
+
+  ctx.fillStyle = '#3A2A1A';
+  ctx.font = '34px serif';
+  ctx.fillText('上記のまち歩きコースを', w / 2, 670);
+  ctx.fillText('見事完走されましたことを', w / 2, 730);
+  ctx.fillText('ここに証し、表彰いたします。', w / 2, 790);
+
+  ctx.strokeStyle = '#D4C9B0';
+  ctx.strokeRect(210, 880, 780, 140);
+  ctx.font = 'bold 46px serif';
+  ctx.fillStyle = '#9A7A3A';
+  ctx.fillText(dist, 340, 950);
+  ctx.fillText(like, 600, 950);
+  ctx.fillText(count, 860, 950);
+  ctx.fillStyle = '#7A6A5A';
+  ctx.font = '24px sans-serif';
+  ctx.fillText('歩行距離 m', 340, 990);
+  ctx.fillText('今回の獲得', 600, 990);
+  ctx.fillText('訪問スポット', 860, 990);
+
+  ctx.fillStyle = '#7A6A5A';
+  ctx.font = '30px serif';
+  ctx.fillText(date, w / 2, 1115);
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#2A1A0A';
+  ctx.font = '34px serif';
+  ctx.fillText(issuer, 820, 1255);
+
+  ctx.textAlign = 'center';
+  ctx.strokeStyle = '#B83232';
+  ctx.fillStyle = 'rgba(184,50,50,.05)';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.arc(930, 1228, 78, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(930, 1228, 61, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = '#B83232';
+  ctx.font = 'bold 30px serif';
+  drawWrappedText(ctx, seal, 930, 1218, 86, 34);
+
+  const link = document.createElement('a');
+  const safeName = (course || 'certificate').replace(/[\\/:*?"<>|]/g, '').slice(0, 40);
+  link.download = `${safeName}_certificate.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  trackEvent('certificate_download', { course_name: course });
+}
+
 function switchPrizesTab(tab) {
   document.getElementById('tab-prizes').classList.toggle('active', tab === 'prizes');
   document.getElementById('tab-stamps').classList.toggle('active', tab === 'stamps');
