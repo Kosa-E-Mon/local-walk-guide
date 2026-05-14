@@ -592,6 +592,16 @@ body {
 .prizes-location-group { margin-top: 14px; margin-bottom: 6px; }
 .prizes-location-pref { font-size: 10px; color: rgba(250,247,241,.32); letter-spacing: .2em; }
 .prizes-location-city { font-size: 12px; color: rgba(250,247,241,.55); letter-spacing: .12em; font-weight: 500; margin-top: 1px; }
+.backup-actions { padding: 10px 16px 2px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.backup-btn { background: rgba(255,255,255,.06); border: 1px solid rgba(250,247,241,.16); color: var(--paper); padding: 10px 8px; border-radius: 8px; font-family: var(--font-title); font-size: 12px; letter-spacing: .08em; cursor: pointer; }
+.backup-btn:active { background: rgba(255,255,255,.12); }
+.visited-list { display: flex; flex-direction: column; gap: 10px; }
+.visited-card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 15px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+.visited-pref { font-size: 11px; color: var(--muted); letter-spacing: .16em; margin-bottom: 3px; }
+.visited-city { font-family: var(--font-title); font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.45; }
+.visited-area { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 2px; }
+.visited-date { text-align: right; font-size: 10px; color: var(--gold); letter-spacing: .08em; line-height: 1.6; min-width: 74px; }
+.visited-date span { display: block; font-size: 12px; font-family: var(--font-title); color: var(--ink); letter-spacing: 0; }
 
 /* ══ カスタムモーダル ══ */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(28,26,22,.78); z-index: 9999; align-items: center; justify-content: center; padding: 24px; }
@@ -846,7 +856,7 @@ body {
         <!-- ボタン -->
         <div class="cert-sho-buttons">
           <button class="cert-sho-btn-download" onclick="downloadCertificate()">証明書を保存する</button>
-          <button class="cert-sho-btn-primary" onclick="showScreen('screen-prizes');switchPrizesTab('prizes')">🏮 御朱印帳を確認する</button>
+          <button class="cert-sho-btn-primary" onclick="showScreen('screen-prizes');switchPrizesTab('prizes')">🖌️ 御朱印帳を確認する</button>
           <button class="cert-sho-btn-secondary" onclick="goHome()">コース選択に戻る</button>
         </div>
       </div>
@@ -860,8 +870,13 @@ body {
     <div class="prizes-header-badge">GOSHUIN BOOK</div>
     <div class="prizes-header-title">御朱印帳</div>
     <div class="prizes-tabs">
-      <div class="prizes-tab active" id="tab-prizes" onclick="switchPrizesTab('prizes')">🏮 一覧</div>
-      <div class="prizes-tab" id="tab-stamps" onclick="switchPrizesTab('stamps')">🔖 御朱印帳</div>
+      <div class="prizes-tab active" id="tab-prizes" onclick="switchPrizesTab('prizes')">🖌️ 御朱印帳</div>
+      <div class="prizes-tab" id="tab-stamps" onclick="switchPrizesTab('stamps')">訪れたまち歩き</div>
+    </div>
+    <div class="backup-actions">
+      <button class="backup-btn" onclick="exportBackup()">データを保存</button>
+      <button class="backup-btn" onclick="document.getElementById('backup-file').click()">データを復元</button>
+      <input type="file" id="backup-file" accept="application/json,.json" style="display:none" onchange="importBackup(event)">
     </div>
   </div>
   <div class="prizes-filter" id="prizes-filter"></div>
@@ -934,8 +949,10 @@ let nextLockTimer = null;      // 「次へ」タイマー解除用
 // ══════════════════════════════════════
 // ローカルストレージ
 // ══════════════════════════════════════
-function lsGet(key, def) { try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? def; } catch { return def; } }
-function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+const STORAGE_PREFIX = 'lwg_';
+function storageKey(key) { return key.startsWith(STORAGE_PREFIX) ? key : STORAGE_PREFIX + key; }
+function lsGet(key, def) { try { return JSON.parse(localStorage.getItem(storageKey(key)) ?? 'null') ?? def; } catch { return def; } }
+function lsSet(key, val) { try { localStorage.setItem(storageKey(key), JSON.stringify(val)); } catch {} }
 
 function loadPrizes() { return lsGet('lwg_prizes', {}); }
 function coursePrizeId(courseOrId, sheetId = currentSheetId) {
@@ -1093,13 +1110,35 @@ function applyHomeTheme(mode) {
 
 function loadAreas() { return lsGet('lwg_areas', { home: null, favorites: [], visited: [] }); }
 function saveAreas(areas) { lsSet('lwg_areas', areas); }
+function loadProgressMap() {
+  const progress = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith('lwg_progress_')) continue;
+    try { progress[key] = JSON.parse(localStorage.getItem(key)); } catch {}
+  }
+  return progress;
+}
+function saveProgressMap(progress = {}) {
+  Object.entries(progress).forEach(([key, val]) => {
+    if (key.startsWith('lwg_progress_')) lsSet(key, val);
+  });
+}
 
 function recordVisit(sheetId, name) {
   const areas = loadAreas();
+  const visit = {
+    sid: sheetId,
+    name,
+    date: new Date().toISOString(),
+    prefecture: cfg.area_pref || cfg.prefecture || '',
+    city: cfg.area_city || cfg.city || '',
+    area: cfg.area_name || cfg.area_town || name || ''
+  };
   if (!areas.home) { areas.home = { sid: sheetId, name }; }
   const alreadyVisited = areas.visited.find(v => v.sid === sheetId);
-  if (!alreadyVisited) areas.visited.push({ sid: sheetId, name, date: new Date().toISOString() });
-  else alreadyVisited.date = new Date().toISOString();
+  if (!alreadyVisited) areas.visited.push(visit);
+  else Object.assign(alreadyVisited, visit);
   saveAreas(areas);
 }
 
@@ -1435,7 +1474,7 @@ function renderHome() {
     if (!visitedMasuda) {
       const lbl = sectionLabel('こんなまち歩きも'); lbl.style.marginTop = '14px';
       body.appendChild(lbl);
-      const masudaCard = makeAreaCard({ sid: MASUDA_SHEET_ID, name: '増田まち歩き', desc: '秋田県横手市増田町 ／ 重要伝統的建造物群保存地区' }, '🏮', 'masuda');
+      const masudaCard = makeAreaCard({ sid: MASUDA_SHEET_ID, name: '増田まち歩き', desc: '秋田県横手市増田町 ／ 重要伝統的建造物群保存地区' }, '🖌️', 'masuda');
       body.appendChild(masudaCard);
     }
   }
@@ -1444,7 +1483,7 @@ function renderHome() {
   const btnPrizes = document.createElement('button');
   btnPrizes.className = 'btn-prizes-home';
   btnPrizes.style.marginTop = '14px';
-  btnPrizes.textContent = '🏮 御朱印帳を見る';
+  btnPrizes.textContent = '🖌️ 御朱印帳を見る';
   btnPrizes.onclick = () => { showScreen('screen-prizes'); switchPrizesTab('prizes'); };
   body.appendChild(btnPrizes);
 
@@ -1686,6 +1725,109 @@ function showModal(title, message, confirmLabel, cancelLabel, onConfirm, onCance
   document.getElementById('modal-overlay').classList.add('show');
 }
 function hideModal() { document.getElementById('modal-overlay').classList.remove('show'); }
+
+// ══════════════════════════════════════
+// JSONバックアップ／復元
+// ══════════════════════════════════════
+function createBackupPayload() {
+  return {
+    app: 'local-walk-guide',
+    version: '1.0',
+    saved_at: new Date().toISOString(),
+    current_sheet_id: currentSheetId,
+    lwg_prizes: loadPrizes(),
+    lwg_areas: loadAreas(),
+    lwg_lifetime_walk_m: loadLifetimeWalk(),
+    lwg_progress: loadProgressMap()
+  };
+}
+
+function exportBackup() {
+  const payload = createBackupPayload();
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `local-walk-guide-backup-${date}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showModal(
+    'データを保存しました',
+    'JSONファイルを端末に保存しました。\nサイトデータを削除しても、このファイルから復元できます。',
+    'OK', '閉じる',
+    () => {},
+    null
+  );
+}
+
+function importBackup(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = normalizeBackupPayload(JSON.parse(reader.result));
+      const counts = backupCounts(data);
+      showModal(
+        'データを復元しますか？',
+        `御朱印 ${counts.prizes}件\n訪れたまち歩き ${counts.areas}件\n途中再開データ ${counts.progress}件\n\n現在の端末データと統合して復元します。`,
+        '復元する', 'キャンセル',
+        () => {
+          applyBackupData(data);
+          showModal('復元しました', '御朱印帳・訪問履歴・途中再開データを復元しました。', 'OK', '閉じる', () => {}, null);
+        },
+        null
+      );
+    } catch(e) {
+      showModal('復元できませんでした', 'バックアップJSONの形式を確認してください。', 'OK', '閉じる', () => {}, null);
+    } finally {
+      input.value = '';
+    }
+  };
+  reader.onerror = () => {
+    input.value = '';
+    showModal('復元できませんでした', 'ファイルを読み込めませんでした。', 'OK', '閉じる', () => {}, null);
+  };
+  reader.readAsText(file);
+}
+
+function normalizeBackupPayload(data) {
+  if (!data || typeof data !== 'object') throw new Error('invalid_backup');
+  const normalized = {
+    lwg_prizes: data.lwg_prizes || data.prizes || {},
+    lwg_areas: data.lwg_areas || data.areas || { home: null, favorites: [], visited: [] },
+    lwg_lifetime_walk_m: data.lwg_lifetime_walk_m || data.lifetime_walk_m || 0,
+    lwg_progress: data.lwg_progress || data.progress || {}
+  };
+  if (
+    typeof normalized.lwg_prizes !== 'object' ||
+    typeof normalized.lwg_areas !== 'object' ||
+    typeof normalized.lwg_progress !== 'object'
+  ) throw new Error('invalid_backup');
+  return normalized;
+}
+
+function backupCounts(data) {
+  return {
+    prizes: Object.keys(data.lwg_prizes || {}).length,
+    areas: (data.lwg_areas?.visited || []).length,
+    progress: Object.keys(data.lwg_progress || {}).length
+  };
+}
+
+function applyBackupData(imported) {
+  const merged = mergeBackup(imported, createBackupPayload());
+  lsSet('lwg_prizes', merged.lwg_prizes);
+  lsSet('lwg_areas', merged.lwg_areas);
+  saveLifetimeWalk(merged.lwg_lifetime_walk_m || 0);
+  saveProgressMap(merged.lwg_progress || {});
+  updateLikeBar();
+  if (document.getElementById('screen-prizes').classList.contains('active')) switchPrizesTab('prizes');
+  if (document.getElementById('screen-home').classList.contains('active')) renderHome();
+}
 
 function confirmGoHome() {
   showModal(
@@ -2309,7 +2451,7 @@ function showExplain(spot) {
   const kw = document.getElementById('explain-keywords'); kw.innerHTML='';
   if (spot.keywords) spot.keywords.split(',').forEach(k => { k=k.trim(); if(!k)return; const s=document.createElement('span'); s.className='explain-keyword'; s.textContent=k; kw.appendChild(s); });
 
-  document.getElementById('btn-next').textContent = isLast ? '🏮 表彰状を受け取る' : '次のスポットへ →';
+  document.getElementById('btn-next').textContent = isLast ? '🖌️ 表彰状を受け取る' : '次のスポットへ →';
   explainCurrentSpot = spot; // 「もう一度聴く」用にスポットを保持
   showScreen('screen-explain');
   // ※ 音声再生は呼び出し元（playArriveSequence）が到着音声 → 解説音声の順で制御する
@@ -2558,7 +2700,7 @@ function switchPrizesTab(tab) {
   document.getElementById('tab-prizes').classList.toggle('active', tab === 'prizes');
   document.getElementById('tab-stamps').classList.toggle('active', tab === 'stamps');
   if (tab === 'prizes') renderPrizes();
-  else renderStamps();
+  else renderVisitedWalks();
 }
 
 // ══════════════════════════════════════
@@ -2575,7 +2717,7 @@ function renderPrizes() {
   const savedItems = Object.entries(prizes).map(([pid, val]) => {
     const name = prizeCourse(val) || allCourses.find(c => pid === coursePrizeId(c) || pid === legacyPrizeId(c))?.course_name || 'まち歩きコース';
     return {
-      id: pid, name, icon: '🏮', desc: `${name}を完走`,
+      id: pid, name, icon: '🖌️', desc: `${name}を完走`,
       done: !!prizeDate(val),
       date: prizeDate(val),
       area: prizeArea(val),
@@ -2588,7 +2730,7 @@ function renderPrizes() {
   const lockedItems = allCourses.filter(c => !prizeForCourse(prizes, c)).map(c => {
     const pid = coursePrizeId(c);
     return {
-      id: pid, name: c.course_name, icon: '🏮', desc: `${c.course_name}を完走`,
+      id: pid, name: c.course_name, icon: '🖌️', desc: `${c.course_name}を完走`,
       done: false,
       date: null,
       area: '',
@@ -2610,7 +2752,7 @@ function renderPrizes() {
   }
 
   if (items.length === 0) {
-    body.innerHTML=`<div class="empty-prizes"><div class="empty-icon">🏮</div>まだ御朱印はありません。<br>まち歩きを完走すると獲得できます。</div>`;
+    body.innerHTML=`<div class="empty-prizes"><div class="empty-icon">🖌️</div>まだ御朱印はありません。<br>まち歩きを完走すると獲得できます。</div>`;
     return;
   }
 
@@ -2660,6 +2802,68 @@ function makePrizeCard(prize, done) {
       <div class="prize-status-icon">${done?'🥇':'🔒'}</div>
       <div class="prize-status-label">${done?'授与済み':'未達成'}</div>
     </div>`;
+  return card;
+}
+
+// ══════════════════════════════════════
+// これまで訪れたまち歩き
+// ══════════════════════════════════════
+function renderVisitedWalks() {
+  const body = document.getElementById('prizes-body'); body.innerHTML = '';
+  const filterEl = document.getElementById('prizes-filter'); if (filterEl) filterEl.innerHTML = '';
+  const areas = loadAreas();
+  const visits = (areas.visited || [])
+    .filter(v => v && v.sid)
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  if (visits.length === 0) {
+    body.innerHTML = `<div class="empty-prizes"><div class="empty-icon">📍</div>訪問履歴はまだありません。</div>`;
+    return;
+  }
+
+  const lbl = document.createElement('div');
+  lbl.className = 'prizes-section-label';
+  lbl.textContent = `VISITED — ${visits.length}件`;
+  body.appendChild(lbl);
+
+  const list = document.createElement('div');
+  list.className = 'visited-list';
+  visits.forEach(v => list.appendChild(makeVisitedCard(v)));
+  body.appendChild(list);
+}
+
+function makeVisitedCard(visit) {
+  const pref = visit.prefecture || visit.pref || '';
+  const city = visit.city || '';
+  const area = visit.area || visit.area_name || visit.name || '';
+  const date = visit.date ? formatDate(visit.date) : '記録なし';
+
+  const card = document.createElement('div');
+  card.className = 'visited-card';
+
+  const info = document.createElement('div');
+  const prefEl = document.createElement('div');
+  prefEl.className = 'visited-pref';
+  prefEl.textContent = pref || '県未設定';
+  const cityEl = document.createElement('div');
+  cityEl.className = 'visited-city';
+  cityEl.textContent = city || visit.name || '市区町村未設定';
+  const areaEl = document.createElement('div');
+  areaEl.className = 'visited-area';
+  areaEl.textContent = area || 'エリア未設定';
+  info.append(prefEl, cityEl, areaEl);
+
+  const dateEl = document.createElement('div');
+  dateEl.className = 'visited-date';
+  dateEl.innerHTML = '最終訪問';
+  const dateValue = document.createElement('span');
+  dateValue.textContent = date;
+  dateEl.appendChild(dateValue);
+
+  card.append(info, dateEl);
+  card.onclick = () => {
+    if (visit.sid && visit.sid !== currentSheetId) location.href = `${location.pathname}?sid=${visit.sid}`;
+  };
   return card;
 }
 
@@ -2953,7 +3157,21 @@ function mergeBackup(cloud, local) {
     cloud.lwg_lifetime_walk_m || 0
   );
 
-  return { lwg_prizes: merged_prizes, lwg_areas: merged_areas, lwg_lifetime_walk_m: merged_walk };
+  // progress: 地域別の途中再開データ。保存日時が新しい方を採用
+  const merged_progress = { ...(local.lwg_progress || {}) };
+  for (const [key, cVal] of Object.entries(cloud.lwg_progress || {})) {
+    if (!key.startsWith('lwg_progress_')) continue;
+    const lVal = merged_progress[key];
+    if (!lVal) {
+      merged_progress[key] = cVal;
+      continue;
+    }
+    const localDate = new Date(lVal.savedAt || 0);
+    const cloudDate = new Date(cVal?.savedAt || 0);
+    if (cloudDate > localDate) merged_progress[key] = cVal;
+  }
+
+  return { lwg_prizes: merged_prizes, lwg_areas: merged_areas, lwg_lifetime_walk_m: merged_walk, lwg_progress: merged_progress };
 }
 
 // ── 同期メイン処理 ──
@@ -2968,11 +3186,7 @@ async function syncCloud() {
     }
 
     const cloudData = await driveLoadBackup();
-    const localData = {
-      lwg_prizes: loadPrizes(),
-      lwg_areas: loadAreas(),
-      lwg_lifetime_walk_m: loadLifetimeWalk()
-    };
+    const localData = createBackupPayload();
 
     let finalData;
     if (!cloudData) {
@@ -2985,6 +3199,7 @@ async function syncCloud() {
     lsSet('lwg_prizes', finalData.lwg_prizes);
     lsSet('lwg_areas',  finalData.lwg_areas);
     saveLifetimeWalk(finalData.lwg_lifetime_walk_m || 0);
+    saveProgressMap(finalData.lwg_progress || {});
     updateLikeBar();
 
     // Driveに保存
