@@ -412,39 +412,40 @@ body {
 .like-bar-val { font-family: var(--font-title); font-size: 13px; color: rgba(250,247,241,.35); font-weight: 600; letter-spacing: .04em; }
 
 .weather-bar {
-  padding: 6px 16px 7px; display: flex; align-items: center; gap: 7px;
+  padding: 7px 16px 7px; display: flex; align-items: center; gap: 8px;
   border-bottom: 1px solid var(--home-line, rgba(255,255,255,.06));
   background: rgba(255,255,255,.025);
-  min-height: 30px;
+  min-height: 34px;
 }
 .weather-dot {
-  width: 6px; height: 6px; border-radius: 50%;
+  width: 7px; height: 7px; border-radius: 50%;
   background: rgba(250,247,241,.28); flex-shrink: 0;
 }
 .weather-dot.hot { background: var(--orange); box-shadow: 0 0 0 3px rgba(200,112,32,.12); }
 .weather-dot.rain { background: #5a7da0; box-shadow: 0 0 0 3px rgba(90,125,160,.12); }
 .weather-text {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: 10px; color: var(--home-subtext, rgba(250,247,241,.38)); letter-spacing: .04em;
+  font-size: 11px; color: var(--home-subtext, rgba(250,247,241,.42)); letter-spacing: .04em;
 }
 .weather-refresh {
-  width: 24px; height: 24px; border-radius: 50%;
+  width: 26px; height: 26px; border-radius: 50%;
   border: 1px solid var(--home-card-border, rgba(255,255,255,.12));
   background: transparent; color: var(--home-subtext, rgba(250,247,241,.42));
-  font-size: 13px; line-height: 1; cursor: pointer; flex-shrink: 0;
+  font-size: 14px; line-height: 1; cursor: pointer; flex-shrink: 0;
 }
 .weather-refresh:active { opacity: .65; }
 
-.nav-sensors { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 64%; }
+.nav-sensors { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 72%; }
 .nav-sensors .gps-status { min-width: 0; flex-shrink: 1; }
 .nav-sensors .gps-status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-weather-chip {
-  display: none; align-items: center; gap: 4px; max-width: 126px;
-  border-left: 1px solid rgba(122,112,96,.22); padding-left: 8px;
-  font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: none; align-items: center; gap: 6px; max-width: 172px; min-height: 26px;
+  border: 1px solid rgba(122,112,96,.22); border-radius: 999px; padding: 4px 9px;
+  background: rgba(250,247,241,.58);
+  font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .nav-weather-chip.show { display: flex; }
-.nav-weather-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.nav-weather-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
 .nav-weather-dot.hot { background: var(--orange); }
 .nav-weather-dot.rain { background: #5a7da0; }
 .nav-weather-text { overflow: hidden; text-overflow: ellipsis; }
