@@ -411,6 +411,44 @@ body {
 .like-bar-text { font-size: 10px; color: rgba(250,247,241,.28); letter-spacing: .06em; flex: 1; }
 .like-bar-val { font-family: var(--font-title); font-size: 13px; color: rgba(250,247,241,.35); font-weight: 600; letter-spacing: .04em; }
 
+.weather-bar {
+  padding: 6px 16px 7px; display: flex; align-items: center; gap: 7px;
+  border-bottom: 1px solid var(--home-line, rgba(255,255,255,.06));
+  background: rgba(255,255,255,.025);
+  min-height: 30px;
+}
+.weather-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(250,247,241,.28); flex-shrink: 0;
+}
+.weather-dot.hot { background: var(--orange); box-shadow: 0 0 0 3px rgba(200,112,32,.12); }
+.weather-dot.rain { background: #5a7da0; box-shadow: 0 0 0 3px rgba(90,125,160,.12); }
+.weather-text {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; color: var(--home-subtext, rgba(250,247,241,.38)); letter-spacing: .04em;
+}
+.weather-refresh {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid var(--home-card-border, rgba(255,255,255,.12));
+  background: transparent; color: var(--home-subtext, rgba(250,247,241,.42));
+  font-size: 13px; line-height: 1; cursor: pointer; flex-shrink: 0;
+}
+.weather-refresh:active { opacity: .65; }
+
+.nav-sensors { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 64%; }
+.nav-sensors .gps-status { min-width: 0; flex-shrink: 1; }
+.nav-sensors .gps-status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-weather-chip {
+  display: none; align-items: center; gap: 4px; max-width: 126px;
+  border-left: 1px solid rgba(122,112,96,.22); padding-left: 8px;
+  font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nav-weather-chip.show { display: flex; }
+.nav-weather-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.nav-weather-dot.hot { background: var(--orange); }
+.nav-weather-dot.rain { background: #5a7da0; }
+.nav-weather-text { overflow: hidden; text-overflow: ellipsis; }
+
 /* ══ 修了書（賞状スタイル） ══ */
 #screen-goal { background: #2A2218; overflow-y: auto; }
 .cert-sho-wrap { min-height: 100vh; padding: 24px 16px 40px; display: flex; align-items: flex-start; justify-content: center; position: relative; overflow: hidden; }
@@ -698,6 +736,11 @@ body {
     <span class="like-bar-text">累計いいね</span>
     <span class="like-bar-val" id="like-bar-val">0 いいね</span>
   </div>
+  <div class="weather-bar" id="weather-bar">
+    <span class="weather-dot" id="weather-dot"></span>
+    <span class="weather-text" id="weather-text">&#22825;&#27671;&#12434;&#30906;&#35469;&#20013;</span>
+    <button class="weather-refresh" onclick="refreshWeather(true)" title="&#22825;&#27671;&#12434;&#26356;&#26032;" aria-label="&#22825;&#27671;&#12434;&#26356;&#26032;">&#8635;</button>
+  </div>
   <div class="home-body" id="home-body"></div>
 </div>
 
@@ -707,7 +750,10 @@ body {
     <div class="nav-progress-bar"><div class="nav-progress-fill" id="progress-fill"></div></div>
     <div class="nav-top-row">
       <div class="nav-step-label" id="nav-step-label"></div>
-      <div class="gps-status"><div class="gps-dot searching" id="gps-dot"></div><span id="gps-label">GPS取得中</span></div>
+      <div class="nav-sensors">
+        <div class="gps-status"><div class="gps-dot searching" id="gps-dot"></div><span id="gps-label">GPS取得中</span></div>
+        <div class="nav-weather-chip" id="nav-weather-chip"><span class="nav-weather-dot" id="nav-weather-dot"></span><span class="nav-weather-text" id="nav-weather-text"></span></div>
+      </div>
     </div>
     <div class="nav-name-row">
       <div class="nav-spot-name" id="nav-spot-name"></div>
@@ -1009,6 +1055,118 @@ function updateLikeBar() {
 }
 
 // ── ホーム画面テーマ切替 ──
+const WEATHER_CACHE_MS = 12 * 60 * 1000;
+let weatherState = { data: null, lat: null, lng: null, fetchedAt: 0, loading: false };
+
+function getHomeWeatherPoint() {
+  const cfgLat = parseFloat(cfg.weather_lat || cfg.lat || cfg.area_lat);
+  const cfgLng = parseFloat(cfg.weather_lng || cfg.lng || cfg.area_lng);
+  if (Number.isFinite(cfgLat) && Number.isFinite(cfgLng)) return { lat: cfgLat, lng: cfgLng };
+  const firstSpot = allSpots.find(s => Number.isFinite(s.lat) && Number.isFinite(s.lng));
+  return firstSpot ? { lat: firstSpot.lat, lng: firstSpot.lng } : null;
+}
+
+function weatherCodeLabel(code) {
+  if (code === 0) return '\u5feb\u6674';
+  if ([1,2].includes(code)) return '\u6674\u308c\u9593\u3042\u308a';
+  if (code === 3) return '\u304f\u3082\u308a';
+  if ([45,48].includes(code)) return '\u9727';
+  if ([51,53,55,56,57].includes(code)) return '\u5c0f\u96e8';
+  if ([61,63,65,66,67,80,81,82].includes(code)) return '\u96e8';
+  if ([71,73,75,77,85,86].includes(code)) return '\u96ea';
+  if ([95,96,99].includes(code)) return '\u96f7\u96e8';
+  return '\u5929\u6c17';
+}
+
+function getWeatherTone(current = {}) {
+  const code = Number(current.weather_code);
+  const apparent = Number(current.apparent_temperature ?? current.temperature_2m);
+  if (Number.isFinite(apparent) && apparent >= 30) return 'hot';
+  if ([51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99].includes(code)) return 'rain';
+  return '';
+}
+
+function buildWeatherText(data, compact = false) {
+  const current = data?.current || {};
+  const temp = Math.round(Number(current.temperature_2m));
+  const apparent = Math.round(Number(current.apparent_temperature));
+  const label = weatherCodeLabel(Number(current.weather_code));
+  if (!Number.isFinite(temp)) return compact ? '' : '\u5929\u6c17\u3092\u53d6\u5f97\u3067\u304d\u307e\u305b\u3093';
+
+  const tempText = `${temp}\u2103`;
+  const apparentText = Number.isFinite(apparent) && Math.abs(apparent - temp) >= 2
+    ? `\u30fb\u4f53\u611f${apparent}\u2103`
+    : '';
+  const heatText = Number.isFinite(apparent) && apparent >= 30
+    ? compact ? '\u30fb\u6c34\u5206' : '\u30fb\u6c34\u5206\u3068\u4f11\u61a9\u3092\u5c11\u3057'
+    : '';
+  return compact ? `${tempText}${apparentText} ${label}${heatText}` : `\u73fe\u5728 ${tempText}${apparentText}\u30fb${label}${heatText}`;
+}
+
+function setWeatherLoading(text) {
+  const homeText = document.getElementById('weather-text');
+  if (homeText) homeText.textContent = text;
+}
+
+function renderWeather(data) {
+  const tone = getWeatherTone(data?.current || {});
+  const homeText = document.getElementById('weather-text');
+  const homeDot = document.getElementById('weather-dot');
+  if (homeText) homeText.textContent = buildWeatherText(data, false);
+  if (homeDot) homeDot.className = 'weather-dot' + (tone ? ' ' + tone : '');
+
+  const chip = document.getElementById('nav-weather-chip');
+  const navText = document.getElementById('nav-weather-text');
+  const navDot = document.getElementById('nav-weather-dot');
+  if (chip && navText) {
+    const text = buildWeatherText(data, true);
+    navText.textContent = text;
+    chip.classList.toggle('show', !!text);
+  }
+  if (navDot) navDot.className = 'nav-weather-dot' + (tone ? ' ' + tone : '');
+}
+
+function setWeatherError() {
+  const homeText = document.getElementById('weather-text');
+  if (homeText) homeText.textContent = '\u5929\u6c17\u306f\u5f8c\u3067\u518d\u78ba\u8a8d\u3067\u304d\u307e\u3059';
+  const chip = document.getElementById('nav-weather-chip');
+  if (chip) chip.classList.remove('show');
+}
+
+async function refreshWeather(force = false, point = null) {
+  const target = point || getHomeWeatherPoint();
+  if (!target || weatherState.loading) return;
+
+  const now = Date.now();
+  const samePlace = weatherState.lat !== null &&
+    Math.abs(weatherState.lat - target.lat) < 0.025 &&
+    Math.abs(weatherState.lng - target.lng) < 0.025;
+  if (!force && weatherState.data && samePlace && now - weatherState.fetchedAt < WEATHER_CACHE_MS) {
+    renderWeather(weatherState.data);
+    return;
+  }
+
+  weatherState.loading = true;
+  if (!weatherState.data) setWeatherLoading('\u5929\u6c17\u3092\u78ba\u8a8d\u4e2d');
+  try {
+    const params = new URLSearchParams({
+      latitude: String(target.lat),
+      longitude: String(target.lng),
+      current: 'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code',
+      timezone: 'auto'
+    });
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+    if (!res.ok) throw new Error('weather_fetch_failed');
+    const data = await res.json();
+    weatherState = { data, lat: target.lat, lng: target.lng, fetchedAt: Date.now(), loading: false };
+    renderWeather(data);
+  } catch (e) {
+    weatherState.loading = false;
+    console.error('Weather error:', e);
+    setWeatherError();
+  }
+}
+
 const HOME_THEME_KEY = 'lwg_home_theme';
 let homeThemeAutoStarted = false;
 
@@ -1244,6 +1402,7 @@ async function initApp() {
 
     showScreen('screen-home');
     renderHome();
+    refreshWeather();
 
   } catch(e) {
     console.error(e);
@@ -1608,6 +1767,7 @@ function startWalk(playStartAnnounce) {
   updateNavScreen();
   pushNavHistory();
   showScreen('screen-nav');
+  if (courseSpots[0]) refreshWeather(false, { lat: courseSpots[0].lat, lng: courseSpots[0].lng });
   initMap();
   startGPS();
 
@@ -2042,6 +2202,7 @@ function onGPSUpdate(pos) {
     }
   }
   lastWalkPos = { lat, lng };
+  refreshWeather(false, { lat, lng });
 
   // 地図現在地
   if (leafletMap) {
