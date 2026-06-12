@@ -1085,6 +1085,42 @@ let nextButtonLocked = false;  // 「次へ」ボタンロック中フラグ
 let nextLockTimer = null;      // 「次へ」タイマー解除用
 
 // ══════════════════════════════════════
+// 多言語化(i18n)基盤
+// 日本語の文言そのものを辞書キーにする。辞書に無い文言は日本語のまま表示(フォールバック)。
+// UI言語はシートの config: lang で宣言する(未設定=ja)。シートの内容(コース名・解説)は翻訳しない。
+// 音声ナレーション文・表彰状キャンバスの文面は対象外(音声多言語化は別途)。
+// ══════════════════════════════════════
+let uiLang = 'ja';
+const I18N = {
+  // 英語辞書はここに足す。例:
+  // en: { 'すべてのコースを見る ▼': 'View all courses ▼', '約{n}分': 'approx. {n} min' }
+  en: {}
+};
+function t(s) {
+  if (uiLang === 'ja') return s;
+  const d = I18N[uiLang];
+  return (d && d[s]) || s;
+}
+// プレースホルダ付き文言用。例: tf('約{n}分', {n: 50})
+function tf(s, params) {
+  let out = t(s);
+  for (const [k, v] of Object.entries(params || {})) out = out.split(`{${k}}`).join(v);
+  return out;
+}
+// 静的HTML中のテキストを辞書で置き換える(ja時は何もしない)
+function localizeStaticDom() {
+  if (uiLang === 'ja') return;
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    const s = node.nodeValue.trim();
+    if (!s) continue;
+    const tr = t(s);
+    if (tr !== s) node.nodeValue = node.nodeValue.replace(s, tr);
+  }
+}
+
+// ══════════════════════════════════════
 // ローカルストレージ
 // ══════════════════════════════════════
 const STORAGE_PREFIX = 'lwg_';
@@ -1143,7 +1179,7 @@ function creditWalk(currentSessionDist) {
 
 function updateLikeBar() {
   const el = document.getElementById('like-bar-val');
-  if (el) el.textContent = `${loadLifetimeWalk().toLocaleString()} いいね`;
+  if (el) el.textContent = `${loadLifetimeWalk().toLocaleString()} ${t('いいね')}`;
 }
 
 // ── ホーム画面テーマ切替 ──
@@ -1159,15 +1195,15 @@ function getHomeWeatherPoint() {
 }
 
 function weatherCodeLabel(code) {
-  if (code === 0) return '\u5feb\u6674';
-  if ([1,2].includes(code)) return '\u6674\u308c\u9593\u3042\u308a';
-  if (code === 3) return '\u304f\u3082\u308a';
-  if ([45,48].includes(code)) return '\u9727';
-  if ([51,53,55,56,57].includes(code)) return '\u5c0f\u96e8';
-  if ([61,63,65,66,67,80,81,82].includes(code)) return '\u96e8';
-  if ([71,73,75,77,85,86].includes(code)) return '\u96ea';
-  if ([95,96,99].includes(code)) return '\u96f7\u96e8';
-  return '\u5929\u6c17';
+  if (code === 0) return t('\u5feb\u6674');
+  if ([1,2].includes(code)) return t('\u6674\u308c\u9593\u3042\u308a');
+  if (code === 3) return t('\u304f\u3082\u308a');
+  if ([45,48].includes(code)) return t('\u9727');
+  if ([51,53,55,56,57].includes(code)) return t('\u5c0f\u96e8');
+  if ([61,63,65,66,67,80,81,82].includes(code)) return t('\u96e8');
+  if ([71,73,75,77,85,86].includes(code)) return t('\u96ea');
+  if ([95,96,99].includes(code)) return t('\u96f7\u96e8');
+  return t('\u5929\u6c17');
 }
 
 function getWeatherTone(current = {}) {
@@ -1183,16 +1219,16 @@ function buildWeatherText(data, compact = false) {
   const temp = Math.round(Number(current.temperature_2m));
   const apparent = Math.round(Number(current.apparent_temperature));
   const label = weatherCodeLabel(Number(current.weather_code));
-  if (!Number.isFinite(temp)) return compact ? '' : '\u5929\u6c17\u3092\u53d6\u5f97\u3067\u304d\u307e\u305b\u3093';
+  if (!Number.isFinite(temp)) return compact ? '' : t('\u5929\u6c17\u3092\u53d6\u5f97\u3067\u304d\u307e\u305b\u3093');
 
   const tempText = `${temp}\u2103`;
   const apparentText = Number.isFinite(apparent) && Math.abs(apparent - temp) >= 2
-    ? `\u30fb\u4f53\u611f${apparent}\u2103`
+    ? `\u30fb${t('\u4f53\u611f')}${apparent}\u2103`
     : '';
   const heatText = Number.isFinite(apparent) && apparent >= 30
-    ? compact ? '\u30fb\u6c34\u5206' : '\u30fb\u6c34\u5206\u3068\u4f11\u61a9\u3092\u5c11\u3057'
+    ? compact ? `\u30fb${t('\u6c34\u5206')}` : `\u30fb${t('\u6c34\u5206\u3068\u4f11\u61a9\u3092\u5c11\u3057')}`
     : '';
-  return compact ? `${tempText}${apparentText} ${label}${heatText}` : `\u73fe\u5728 ${tempText}${apparentText}\u30fb${label}${heatText}`;
+  return compact ? `${tempText}${apparentText} ${label}${heatText}` : `${t('\u73fe\u5728')} ${tempText}${apparentText}\u30fb${label}${heatText}`;
 }
 
 function setWeatherLoading(text) {
@@ -1223,7 +1259,7 @@ function renderWeather(data) {
 
 function setWeatherError() {
   const homeText = document.getElementById('weather-text');
-  if (homeText) homeText.textContent = '\u5929\u6c17\u306f\u5f8c\u3067\u518d\u78ba\u8a8d\u3067\u304d\u307e\u3059';
+  if (homeText) homeText.textContent = t('\u5929\u6c17\u306f\u5f8c\u3067\u518d\u78ba\u8a8d\u3067\u304d\u307e\u3059');
   const chip = document.getElementById('nav-weather-chip');
   if (chip) chip.classList.remove('show');
 }
@@ -1242,7 +1278,7 @@ async function refreshWeather(force = false, point = null) {
   }
 
   weatherState.loading = true;
-  if (!weatherState.data) setWeatherLoading('\u5929\u6c17\u3092\u78ba\u8a8d\u4e2d');
+  if (!weatherState.data) setWeatherLoading(t('\u5929\u6c17\u3092\u78ba\u8a8d\u4e2d'));
   try {
     const params = new URLSearchParams({
       latitude: String(target.lat),
@@ -1284,11 +1320,11 @@ function estimateWBGT(ta, rh) {
 
 function wbgtLevel(w) {
   if (w == null) return null;
-  if (w < 21) return { label: 'ほぼ安全', msg: '通常どおり散策できます', cls: 'safe' };
-  if (w < 25) return { label: '注意', msg: '水分補給を意識しましょう', cls: 'caution' };
-  if (w < 28) return { label: '警戒', msg: '休憩を取りながら歩きましょう', cls: 'warn' };
-  if (w < 31) return { label: '厳重警戒', msg: '長時間の散策は避け、日陰で休みましょう', cls: 'severe' };
-  return { label: '危険', msg: '屋外散策は控えめにしましょう', cls: 'danger' };
+  if (w < 21) return { label: t('ほぼ安全'), msg: t('通常どおり散策できます'), cls: 'safe' };
+  if (w < 25) return { label: t('注意'), msg: t('水分補給を意識しましょう'), cls: 'caution' };
+  if (w < 28) return { label: t('警戒'), msg: t('休憩を取りながら歩きましょう'), cls: 'warn' };
+  if (w < 31) return { label: t('厳重警戒'), msg: t('長時間の散策は避け、日陰で休みましょう'), cls: 'severe' };
+  return { label: t('危険'), msg: t('屋外散策は控えめにしましょう'), cls: 'danger' };
 }
 
 // 環境省 予測値CSVから現在時刻に最も近い予測値を取り出す
@@ -1364,8 +1400,8 @@ function updateWbgt(data) {
   if (bar) {
     if (lv) {
       document.getElementById('wbgt-dot').className = 'weather-dot wbgt-' + lv.cls;
-      const src = currentWbgtOfficial ? '' : '(推定)';
-      document.getElementById('wbgt-text').textContent = `暑さ指数${src} ${currentWbgt}｜${lv.label} — ${lv.msg}`;
+      const src = currentWbgtOfficial ? '' : t('(推定)');
+      document.getElementById('wbgt-text').textContent = `${t('暑さ指数')}${src} ${currentWbgt}｜${lv.label} — ${lv.msg}`;
       bar.style.display = 'flex';
     } else {
       bar.style.display = 'none';
@@ -1385,7 +1421,7 @@ function renderIntroWbgt() {
   el.innerHTML = '';
   const title = document.createElement('span');
   title.className = 'intro-wbgt-title';
-  title.textContent = `本日の暑さ指数${currentWbgtOfficial ? '' : '（推定）'}：WBGT ${currentWbgt}｜${lv.label}`;
+  title.textContent = `${t('本日の暑さ指数')}${currentWbgtOfficial ? '' : t('（推定）')}：WBGT ${currentWbgt}｜${lv.label}`;
   const msg = document.createElement('span');
   msg.className = 'intro-wbgt-msg';
   msg.textContent = lv.msg;
@@ -1488,7 +1524,7 @@ function applyHomeTheme(mode) {
   const btn = document.getElementById('home-theme-toggle');
   if (btn) {
     btn.textContent = mode === 'light' ? '☀️' : '🌙';
-    btn.title = mode === 'light' ? 'ライトモード' : 'ダークモード';
+    btn.title = mode === 'light' ? t('ライトモード') : t('ダークモード');
   }
 }
 
@@ -1575,7 +1611,7 @@ async function fetchSheet(sid, sheet) {
 async function initApp() {
   checkAndResetIfSheetChanged();
   document.getElementById('loading-error').style.display = 'none';
-  document.getElementById('loading-msg').textContent = 'データを読み込んでいます…';
+  document.getElementById('loading-msg').textContent = t('データを読み込んでいます…');
 
   // URLパラメータからsid取得
   const params = new URLSearchParams(location.search);
@@ -1594,6 +1630,10 @@ async function initApp() {
     cfg = {};
     parseCSV(cfgCSV).forEach(r => { if (r.key) cfg[r.key] = r.value; });
     applyConfig();
+
+    // UI言語はシートが宣言する(?lang=は使わない方針。解説とUIの言語混在を防ぐ)
+    uiLang = String(cfg.lang || 'ja').trim().toLowerCase();
+    localizeStaticDom();
 
     // データ
     allCourses = parseCSV(coursesCSV).map(c => ({
@@ -1735,7 +1775,7 @@ function applyConfig() {
   document.title = title;
   document.getElementById('loading-logo').textContent = title;
   document.getElementById('home-title').textContent = title;
-  document.getElementById('home-subtitle').textContent = cfg.app_subtitle || 'コースを選んでください';
+  document.getElementById('home-subtitle').textContent = cfg.app_subtitle || t('コースを選んでください');
 
   // ホームバッジ
   const badge = document.getElementById('home-badge');
@@ -1892,11 +1932,11 @@ function renderHome() {
   const normalCourses = activeCourses.filter(c => !c.recommended);
 
   if (recCourses.length > 0) {
-    allWrap.appendChild(sectionLabel('おすすめ ★'));
+    allWrap.appendChild(sectionLabel(t('おすすめ ★')));
     recCourses.forEach(c => allWrap.appendChild(makeCourseCard(c, prizes)));
   }
   if (normalCourses.length > 0) {
-    const lbl = sectionLabel('コース一覧');
+    const lbl = sectionLabel(t('コース一覧'));
     if (recCourses.length > 0) lbl.style.marginTop = '14px';
     allWrap.appendChild(lbl);
     normalCourses.forEach(c => allWrap.appendChild(makeCourseCard(c, prizes)));
@@ -1905,11 +1945,11 @@ function renderHome() {
   if (activeCourses.length > 0) {
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'btn-all-courses';
-    toggleBtn.textContent = 'すべてのコースを見る ▼';
+    toggleBtn.textContent = t('すべてのコースを見る ▼');
     toggleBtn.onclick = () => {
       const open = allWrap.style.display !== 'none';
       allWrap.style.display = open ? 'none' : 'block';
-      toggleBtn.textContent = open ? 'すべてのコースを見る ▼' : 'すべてのコースを閉じる ▲';
+      toggleBtn.textContent = open ? t('すべてのコースを見る ▼') : t('すべてのコースを閉じる ▲');
       if (!open) trackEvent('home_expand_all_courses');
     };
     body.appendChild(toggleBtn);
@@ -1919,7 +1959,7 @@ function renderHome() {
   // 他のまち歩き（訪れた町）
   const otherAreas = areas.visited.filter(v => v.sid !== currentSheetId);
   if (otherAreas.length > 0) {
-    const lbl = sectionLabel('訪れたまち歩き'); lbl.style.marginTop = '14px';
+    const lbl = sectionLabel(t('訪れたまち歩き')); lbl.style.marginTop = '14px';
     body.appendChild(lbl);
     otherAreas.forEach(a => body.appendChild(makeAreaCard(a, '📍', '')));
   }
@@ -1928,7 +1968,7 @@ function renderHome() {
   if (currentSheetId !== MASUDA_SHEET_ID) {
     const visitedMasuda = areas.visited.find(v => v.sid === MASUDA_SHEET_ID);
     if (!visitedMasuda) {
-      const lbl = sectionLabel('こんなまち歩きも'); lbl.style.marginTop = '14px';
+      const lbl = sectionLabel(t('こんなまち歩きも')); lbl.style.marginTop = '14px';
       body.appendChild(lbl);
       const masudaCard = makeAreaCard({ sid: MASUDA_SHEET_ID, name: '増田まち歩き', desc: '秋田県横手市増田町 ／ 重要伝統的建造物群保存地区' }, '🖌️', 'masuda');
       body.appendChild(masudaCard);
@@ -1939,7 +1979,7 @@ function renderHome() {
   const btnPrizes = document.createElement('button');
   btnPrizes.className = 'btn-prizes-home';
   btnPrizes.style.marginTop = '14px';
-  btnPrizes.textContent = '🖌️ 御朱印帳を見る';
+  btnPrizes.textContent = t('🖌️ 御朱印帳を見る');
   btnPrizes.onclick = () => { showScreen('screen-prizes'); switchPrizesTab('prizes'); };
   body.appendChild(btnPrizes);
 
@@ -1972,10 +2012,10 @@ function renderNearbySection(container, activeCourses, prizes, pos) {
       .filter(Boolean)
       .sort((a,b) => a.d - b.d)
       .slice(0, maxN);
-    label = '近くから始められるコース';
+    label = t('近くから始められるコース');
   } else {
     list = activeCourses.slice(0, maxN).map(c => ({ c, d: null }));
-    label = 'おすすめコース';
+    label = t('おすすめコース');
   }
   if (list.length === 0) return;
   container.appendChild(sectionLabel(label));
@@ -1988,26 +2028,26 @@ function makeCourseCard(course, prizes, distM) {
   card.className = 'course-card' + (course.recommended ? ' recommended' : '') + (done ? ' completed' : '');
 
   let tag = '';
-  if (done) tag = '<div class="course-card-tag tag-done">✓ 完了</div>';
-  else if (course.recommended) tag = '<div class="course-card-tag tag-rec">★ おすすめ</div>';
+  if (done) tag = `<div class="course-card-tag tag-done">${t('✓ 完了')}</div>`;
+  else if (course.recommended) tag = `<div class="course-card-tag tag-rec">${t('★ おすすめ')}</div>`;
 
   let period = '';
   if (course.start_date || course.end_date) {
     const s = course.start_date ? course.start_date.replace(/-/g,'/') : '';
     const e = course.end_date ? course.end_date.replace(/-/g,'/') : '';
-    period = `<div class="course-card-period">🗓 ${s}${e ? ' 〜 '+e : ''} 限定</div>`;
+    period = `<div class="course-card-period">🗓 ${s}${e ? ' 〜 '+e : ''} ${t('限定')}</div>`;
   }
 
   const start = courseStartSpot(course);
-  const distHtml = Number.isFinite(distM) ? `　<span class="course-card-dist">現在地から 約${formatDist(distM)}</span>` : '';
-  const startLine = start ? `<div class="course-card-start">🚩 スタート：${escHtml(start.spot_name)}${distHtml}</div>` : '';
+  const distHtml = Number.isFinite(distM) ? `　<span class="course-card-dist">${tf('現在地から 約{d}', {d: formatDist(distM)})}</span>` : '';
+  const startLine = start ? `<div class="course-card-start">🚩 ${t('スタート：')}${escHtml(start.spot_name)}${distHtml}</div>` : '';
 
   const thumbSrc = course.course_thumbnail_url ? drivePhotoUrl(course.course_thumbnail_url) : '';
   const thumb = thumbSrc ? `<img class="course-card-thumb" src="${escHtml(thumbSrc)}" alt="" loading="lazy" onerror="this.remove()">` : '';
 
   const desc = course.course_description ? `<div class="course-card-desc">${escHtml(course.course_description)}</div>` : '';
 
-  card.innerHTML = `${tag}<div class="course-card-row">${thumb}<div class="course-card-main"><div class="course-card-type">${escHtml(course.course_type)}</div><div class="course-card-name">${escHtml(course.course_name)}</div>${startLine}<div class="course-card-meta"><span>🕐 約${course.duration_min}分</span><span>📍 約${course.distance_m}m</span></div>${desc}${period}</div></div>`;
+  card.innerHTML = `${tag}<div class="course-card-row">${thumb}<div class="course-card-main"><div class="course-card-type">${escHtml(course.course_type)}</div><div class="course-card-name">${escHtml(course.course_name)}</div>${startLine}<div class="course-card-meta"><span>🕐 ${tf('約{n}分', {n: course.duration_min})}</span><span>📍 ${tf('約{n}m', {n: course.distance_m})}</span></div>${desc}${period}</div></div>`;
   card.onclick = () => showCourseIntro(course);
   return card;
 }
@@ -2083,9 +2123,9 @@ function showCourseIntro(course) {
   document.getElementById('intro-desc').textContent = course.course_description || '';
   document.getElementById('intro-start').textContent = start ? start.spot_name : '—';
   document.getElementById('intro-goal').textContent = goal ? goal.spot_name : '—';
-  document.getElementById('intro-time').textContent = course.duration_min ? `約${course.duration_min}分` : '—';
-  document.getElementById('intro-dist').textContent = course.distance_m ? `約${formatDist(course.distance_m)}` : '—';
-  document.getElementById('intro-spots').textContent = `${spots.length}スポット`;
+  document.getElementById('intro-time').textContent = course.duration_min ? tf('約{n}分', {n: course.duration_min}) : '—';
+  document.getElementById('intro-dist').textContent = course.distance_m ? tf('約{d}', {d: formatDist(course.distance_m)}) : '—';
+  document.getElementById('intro-spots').textContent = tf('{n}スポット', {n: spots.length});
 
   // 注意事項
   const notes = document.getElementById('intro-notes');
@@ -2103,13 +2143,13 @@ function showCourseIntro(course) {
   // スポット0件は開始不可
   const startBtn = document.getElementById('btn-intro-start');
   startBtn.disabled = spots.length === 0;
-  startBtn.textContent = spots.length === 0 ? 'スポットデータがありません' : 'このコースを開始する';
+  startBtn.textContent = spots.length === 0 ? t('スポットデータがありません') : t('このコースを開始する');
 
   // 説明音声
   const audioBtn = document.getElementById('btn-intro-audio');
   if (course.course_audio_url) {
     audioBtn.style.display = 'block';
-    audioBtn.textContent = '🔊 コース説明を聞く';
+    audioBtn.textContent = t('🔊 コース説明を聞く');
   } else {
     audioBtn.style.display = 'none';
   }
@@ -2124,7 +2164,7 @@ function playCourseIntroAudio() {
   trackEvent('course_intro_audio_play', { course_id: introCourse.course_id });
   playVoice(introCourse.course_audio_url, '', null, true); // TTSフォールバックなし（fallback空）
   const btn = document.getElementById('btn-intro-audio');
-  if (btn) btn.textContent = '🔊 もう一度聴く';
+  if (btn) btn.textContent = t('🔊 もう一度聴く');
 }
 
 function startCourseFromIntro() {
@@ -2151,7 +2191,7 @@ function selectCourse(course) {
 
   courseSpots = buildCourseSpots(course);
 
-  if (courseSpots.length === 0) { alert('スポットデータがありません'); return; }
+  if (courseSpots.length === 0) { alert(t('スポットデータがありません')); return; }
 
   // 前回の進行状況を確認
   const saved = loadProgress();
@@ -2159,9 +2199,9 @@ function selectCourse(course) {
     const spotName = courseSpots[saved.currentIdx]?.spot_name || '';
     const savedDate = formatDate(saved.savedAt);
     showModal(
-      '途中から再開しますか？',
-      `スポット ${saved.currentIdx + 1} / ${courseSpots.length}\n${spotName} へ向かう途中\n（${savedDate} 保存）`,
-      '続きから再開', '最初から始める',
+      t('途中から再開しますか？'),
+      tf('スポット {a} / {b}\n{name} へ向かう途中\n（{date} 保存）', {a: saved.currentIdx + 1, b: courseSpots.length, name: spotName, date: savedDate}),
+      t('続きから再開'), t('最初から始める'),
       () => {
         currentIdx = saved.currentIdx;
         totalWalkDist = saved.totalWalkDist || 0;
@@ -2284,7 +2324,7 @@ function showScreen(id) {
 }
 
 function formatDist(m) { return m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toFixed(1)} km`; }
-function formatDate(iso) { const d=new Date(iso); return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`; }
+function formatDate(iso) { const d=new Date(iso); return tf('{y}年{m}月{d}日', {y: d.getFullYear(), m: d.getMonth()+1, d: d.getDate()}); }
 
 function goHome() { stopVoice(); stopGPS(); closeAR(); showScreen('screen-home'); renderHome(); }
 
@@ -2329,9 +2369,9 @@ function exportBackup() {
   link.click();
   URL.revokeObjectURL(url);
   showModal(
-    'データを保存しました',
-    'JSONファイルを端末に保存しました。\nサイトデータを削除しても、このファイルから復元できます。',
-    'OK', '閉じる',
+    t('データを保存しました'),
+    t('JSONファイルを端末に保存しました。\nサイトデータを削除しても、このファイルから復元できます。'),
+    t('OK'), t('閉じる'),
     () => {},
     null
   );
@@ -2348,24 +2388,24 @@ function importBackup(event) {
       const data = normalizeBackupPayload(JSON.parse(reader.result));
       const counts = backupCounts(data);
       showModal(
-        'データを復元しますか？',
-        `御朱印 ${counts.prizes}件\n訪れたまち歩き ${counts.areas}件\n途中再開データ ${counts.progress}件\n\n現在の端末データと統合して復元します。`,
-        '復元する', 'キャンセル',
+        t('データを復元しますか？'),
+        tf('御朱印 {p}件\n訪れたまち歩き {a}件\n途中再開データ {g}件\n\n現在の端末データと統合して復元します。', {p: counts.prizes, a: counts.areas, g: counts.progress}),
+        t('復元する'), t('キャンセル'),
         () => {
           applyBackupData(data);
-          showModal('復元しました', '御朱印帳・訪問履歴・途中再開データを復元しました。', 'OK', '閉じる', () => {}, null);
+          showModal(t('復元しました'), t('御朱印帳・訪問履歴・途中再開データを復元しました。'), t('OK'), t('閉じる'), () => {}, null);
         },
         null
       );
     } catch(e) {
-      showModal('復元できませんでした', 'バックアップJSONの形式を確認してください。', 'OK', '閉じる', () => {}, null);
+      showModal(t('復元できませんでした'), t('バックアップJSONの形式を確認してください。'), t('OK'), t('閉じる'), () => {}, null);
     } finally {
       input.value = '';
     }
   };
   reader.onerror = () => {
     input.value = '';
-    showModal('復元できませんでした', 'ファイルを読み込めませんでした。', 'OK', '閉じる', () => {}, null);
+    showModal(t('復元できませんでした'), t('ファイルを読み込めませんでした。'), t('OK'), t('閉じる'), () => {}, null);
   };
   reader.readAsText(file);
 }
@@ -2407,9 +2447,9 @@ function applyBackupData(imported) {
 
 function confirmGoHome() {
   showModal(
-    'まち歩きを中断しますか？',
-    '進行状況は保存されます。\n次回同じコースを選ぶと再開できます。',
-    'ホームへ戻る', '続ける',
+    t('まち歩きを中断しますか？'),
+    t('進行状況は保存されます。\n次回同じコースを選ぶと再開できます。'),
+    t('ホームへ戻る'), t('続ける'),
     () => { saveProgress(); goHome(); },
     null
   );
@@ -2496,7 +2536,7 @@ function lockNextButton() {
   if (!btn) return;
   btn.disabled = true;
   btn.dataset.origText = btn.textContent;
-  btn.textContent = '🔊 音声ガイド再生中…';
+  btn.textContent = t('🔊 音声ガイド再生中…');
 }
 
 function unlockNextButton() {
@@ -2599,8 +2639,8 @@ function setVoiceLog(icon, text) {
 // GPS
 // ══════════════════════════════════════
 function startGPS() {
-  if (!navigator.geolocation) { setGPSStatus('error','GPS非対応'); return; }
-  setGPSStatus('searching','GPS取得中');
+  if (!navigator.geolocation) { setGPSStatus('error', t('GPS非対応')); return; }
+  setGPSStatus('searching', t('GPS取得中'));
   watchId = navigator.geolocation.watchPosition(onGPSUpdate, onGPSError,
     { enableHighAccuracy:true, maximumAge:3000, timeout:15000 });
 }
@@ -2611,7 +2651,7 @@ function stopGPS() {
 
 function onGPSUpdate(pos) {
   const { latitude:lat, longitude:lng, accuracy } = pos.coords;
-  setGPSStatus('active', `精度 ±${Math.round(accuracy)}m`);
+  setGPSStatus('active', tf('精度 ±{n}m', {n: Math.round(accuracy)}));
 
   // 歩行距離
   if (lastWalkPos) {
@@ -2675,9 +2715,9 @@ function onGPSUpdate(pos) {
 }
 
 function onGPSError(err) {
-  const m = {1:'位置情報が許可されていません',2:'位置を取得できません',3:'タイムアウト'};
+  const m = {1: t('位置情報が許可されていません'), 2: t('位置を取得できません'), 3: t('タイムアウト')};
   setGPSStatus('error', m[err.code]||'GPS Error');
-  setVoiceLog('⚠️','手動「着いた！」ボタンをご利用ください');
+  setVoiceLog('⚠️', t('手動「着いた！」ボタンをご利用ください'));
 }
 
 function setGPSStatus(s,l) {
@@ -2705,23 +2745,23 @@ function updateDistanceUI(dist, spot) {
   const ratio = Math.min(1,(500-dist)/500);
   const ringFill = document.getElementById('ring-fill');
   ringFill.style.strokeDashoffset = 113-(ratio*113);
-  document.getElementById('ring-label').textContent = dist<=999?dist+'m':'遠';
+  document.getElementById('ring-label').textContent = dist<=999?dist+'m':t('遠');
   panel.classList.remove('near','arrived');
   panel.style.removeProperty('--distance-pulse-speed');
   if (dist <= spot.arrive_dist) {
     panel.classList.add('arrived');
     document.getElementById('dist-icon').textContent='🎯';
-    document.getElementById('dist-status').textContent='到着しました！';
+    document.getElementById('dist-status').textContent=t('到着しました！');
     ringFill.style.stroke='var(--green)';
   } else if (dist <= spot.approach_dist) {
     panel.classList.add('near');
     document.getElementById('dist-icon').textContent='🏃';
-    document.getElementById('dist-status').textContent=`もうすぐです！（到着判定: ${spot.arrive_dist}m以内）`;
+    document.getElementById('dist-status').textContent=tf('もうすぐです！（到着判定: {n}m以内）', {n: spot.arrive_dist});
     panel.style.setProperty('--distance-pulse-speed', dist <= spot.arrive_dist * 2 ? '1.05s' : '1.45s');
     ringFill.style.stroke='#c87020';
   } else {
     document.getElementById('dist-icon').textContent='🚶';
-    document.getElementById('dist-status').textContent=`${spot.spot_name} まで（到着判定: ${spot.arrive_dist}m以内）`;
+    document.getElementById('dist-status').textContent=tf('{name} まで（到着判定: {n}m以内）', {name: spot.spot_name, n: spot.arrive_dist});
     ringFill.style.stroke='var(--primary)';
   }
 }
@@ -2786,7 +2826,7 @@ async function openAR() {
   const spot = courseSpots[currentIdx];
   document.getElementById('ar-spot-name').textContent = spot.spot_name;
   document.getElementById('ar-dist').innerHTML = `${arLastDist}<span>m</span>`;
-  document.getElementById('ar-compass').textContent = '方位取得中…';
+  document.getElementById('ar-compass').textContent = t('方位取得中…');
 
   // キャリブレーションオーバーレイを表示し、3秒後に自動非表示
   const calib = document.getElementById('ar-calib-overlay');
@@ -2801,7 +2841,7 @@ async function openAR() {
   try {
     arStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
     document.getElementById('ar-video').srcObject = arStream;
-  } catch(e) { document.getElementById('ar-compass').textContent = 'カメラ非対応'; }
+  } catch(e) { document.getElementById('ar-compass').textContent = t('カメラ非対応'); }
 
   // Android: deviceorientationabsolute（真北基準）を優先
   arAbsoluteSupported = false;
@@ -2810,7 +2850,7 @@ async function openAR() {
   setTimeout(() => {
     if (!arAbsoluteSupported) {
       window.addEventListener('deviceorientation', onDeviceOrientationRelative);
-      document.getElementById('ar-compass').textContent = '端末を8の字に振ってコンパスを校正してください';
+      document.getElementById('ar-compass').textContent = t('端末を8の字に振ってコンパスを校正してください');
     }
   }, 200);
 }
@@ -2843,7 +2883,7 @@ function updateARDirection(deviceHeading, accuracy) {
   // SVGコンパス針を回転
   const inner = document.getElementById('ar-dir-inner');
   if (inner) inner.style.transform = `rotate(${relative}deg)`;
-  document.getElementById('ar-compass').textContent = `目標方位: ${Math.round(targetBearing)}°`;
+  document.getElementById('ar-compass').textContent = tf('目標方位: {n}°', {n: Math.round(targetBearing)});
 
   // 精度警告（iOSのwebkitCompassAccuracyが使える場合）
   const warnEl = document.getElementById('ar-accuracy-warn');
@@ -2890,7 +2930,7 @@ function updateNavScreen() {
   const progress = courseSpots.length>1 ? (currentIdx/(courseSpots.length-1))*100 : 100;
   document.getElementById('progress-fill').style.width = progress+'%';
   document.getElementById('nav-step-label').textContent = `STEP ${currentIdx+1} / ${courseSpots.length}`;
-  document.getElementById('nav-spot-name').textContent = spot.spot_name+' へ';
+  document.getElementById('nav-spot-name').textContent = tf('{name} へ', {name: spot.spot_name});
 
   // 次スポット表示
   const nextEl = document.getElementById('nav-next-spot');
@@ -2899,16 +2939,16 @@ function updateNavScreen() {
     if (nextIdx < courseSpots.length) {
       const isGoal = nextIdx === courseSpots.length - 1;
       const nextSpotName = courseSpots[nextIdx].spot_name;
-      nextEl.innerHTML = `次→ <span>${nextSpotName}</span>${isGoal ? '（ゴール）' : ''}`;
+      nextEl.innerHTML = `${t('次→')} <span>${nextSpotName}</span>${isGoal ? t('（ゴール）') : ''}`;
     } else {
-      nextEl.innerHTML = '<span>このスポットがゴールです</span>';
+      nextEl.innerHTML = `<span>${t('このスポットがゴールです')}</span>`;
     }
   }
 
   buildSpotsRow();
   approachNotified=false; arrivedDetected=false;
   document.getElementById('dist-number').innerHTML='--<span>m</span>';
-  document.getElementById('dist-status').textContent=`GPS確認中（到着判定: ${spot.arrive_dist}m以内）`;
+  document.getElementById('dist-status').textContent=tf('GPS確認中（到着判定: {n}m以内）', {n: spot.arrive_dist});
   document.getElementById('ring-fill').style.strokeDashoffset=113;
   document.getElementById('ring-label').textContent='--';
   document.getElementById('distance-panel').className='distance-panel';
@@ -2923,7 +2963,7 @@ function updateArrivedButton() {
   if (!btn) return;
   const locked = voicePlaying || gpsLocked;
   btn.disabled = locked;
-  btn.textContent = locked ? '🔊 音声ガイド再生中…' : '📍 着いた！（手動）';
+  btn.textContent = locked ? t('🔊 音声ガイド再生中…') : t('📍 着いた！（手動）');
 }
 
 // ══════════════════════════════════════
@@ -3036,7 +3076,7 @@ function showExplain(spot) {
   const kw = document.getElementById('explain-keywords'); kw.innerHTML='';
   if (spot.keywords) spot.keywords.split(',').forEach(k => { k=k.trim(); if(!k)return; const s=document.createElement('span'); s.className='explain-keyword'; s.textContent=k; kw.appendChild(s); });
 
-  document.getElementById('btn-next').textContent = isLast ? '🖌️ 表彰状を受け取る' : '次のスポットへ →';
+  document.getElementById('btn-next').textContent = isLast ? t('🖌️ 表彰状を受け取る') : t('次のスポットへ →');
   explainCurrentSpot = spot; // 「もう一度聴く」用にスポットを保持
   showScreen('screen-explain');
   // ※ 音声再生は呼び出し元（playArriveSequence）が到着音声 → 解説音声の順で制御する
@@ -3300,9 +3340,9 @@ function renderPrizes() {
 
   // 獲得済みは保存データから積み上げ、未達成は現在の地域コースだけ出す
   const savedItems = Object.entries(prizes).map(([pid, val]) => {
-    const name = prizeCourse(val) || allCourses.find(c => pid === coursePrizeId(c) || pid === legacyPrizeId(c))?.course_name || 'まち歩きコース';
+    const name = prizeCourse(val) || allCourses.find(c => pid === coursePrizeId(c) || pid === legacyPrizeId(c))?.course_name || t('まち歩きコース');
     return {
-      id: pid, name, icon: '🖌️', desc: `${name}を完走`,
+      id: pid, name, icon: '🖌️', desc: tf('{name}を完走', {name}),
       done: !!prizeDate(val),
       date: prizeDate(val),
       area: prizeArea(val),
@@ -3315,7 +3355,7 @@ function renderPrizes() {
   const lockedItems = allCourses.filter(c => !prizeForCourse(prizes, c)).map(c => {
     const pid = coursePrizeId(c);
     return {
-      id: pid, name: c.course_name, icon: '🖌️', desc: `${c.course_name}を完走`,
+      id: pid, name: c.course_name, icon: '🖌️', desc: tf('{name}を完走', {name: c.course_name}),
       done: false,
       date: null,
       area: '',
@@ -3331,13 +3371,13 @@ function renderPrizes() {
   const locationKeys = [...new Set(completedItems.map(i => [i.pref, i.city, i.areaName].filter(Boolean).join(' ') || i.area || ''))].filter(Boolean);
 
   if (filterEl && locationKeys.length > 1) {
-    const allChip = makeFilterChip('すべて', 'all');
+    const allChip = makeFilterChip(t('すべて'), 'all');
     filterEl.appendChild(allChip);
     locationKeys.forEach(loc => filterEl.appendChild(makeFilterChip(loc, loc)));
   }
 
   if (items.length === 0) {
-    body.innerHTML=`<div class="empty-prizes"><div class="empty-icon">🖌️</div>まだ御朱印はありません。<br>まち歩きを完走すると獲得できます。</div>`;
+    body.innerHTML=`<div class="empty-prizes"><div class="empty-icon">🖌️</div>${t('まだ御朱印はありません。')}<br>${t('まち歩きを完走すると獲得できます。')}</div>`;
     return;
   }
 
@@ -3353,12 +3393,12 @@ function renderPrizes() {
 
   if (completed.length > 0) {
     const lbl = document.createElement('div'); lbl.className='prizes-section-label';
-    lbl.textContent = `COMPLETED — ${completed.length}件`; body.appendChild(lbl);
+    lbl.textContent = tf('COMPLETED — {n}件', {n: completed.length}); body.appendChild(lbl);
     completed.forEach(p => body.appendChild(makePrizeCard(p, true)));
   }
   if (locked.length > 0) {
     const lbl = document.createElement('div'); lbl.className='prizes-section-label';
-    lbl.style.marginTop='16px'; lbl.textContent=`LOCKED — ${locked.length}件`; body.appendChild(lbl);
+    lbl.style.marginTop='16px'; lbl.textContent=tf('LOCKED — {n}件', {n: locked.length}); body.appendChild(lbl);
     locked.forEach(p=>body.appendChild(makePrizeCard(p,false)));
   }
 }
@@ -3373,19 +3413,22 @@ function makeFilterChip(label, key) {
 
 function makePrizeCard(prize, done) {
   const card=document.createElement('div'); card.className='prize-card '+(done?'completed':'locked');
-  const whereText = done && prize.area ? `📍 ${prize.area}` : '';
+  const whereArea = prize.areaName || prize.area || '';
+  // area_nameに市名が既に含まれるシート(例:「秋田県横手市増田」)では市を重ねない
+  const whereParts = (prize.city && !whereArea.includes(prize.city)) ? [prize.city, whereArea] : [whereArea];
+  const whereText = done && whereArea ? `📍 ${whereParts.join(' ')}` : '';
   card.innerHTML=`
     ${done?'<div class="prize-card-bar"></div>':''}
     <div class="prize-card-icon">${done?prize.icon:'🔒'}</div>
     <div class="prize-card-info">
       <div class="prize-card-name">${prize.name}</div>
       <div class="prize-card-desc">${prize.desc}</div>
-      ${done?`<div class="prize-card-date">✓ ${formatDate(prize.date)} 達成</div>`:''}
+      ${done?`<div class="prize-card-date">✓ ${tf('{date} 達成', {date: formatDate(prize.date)})}</div>`:''}
       ${done && whereText?`<div class="prize-card-where">${whereText}</div>`:''}
     </div>
     <div class="prize-card-status">
       <div class="prize-status-icon">${done?'🥇':'🔒'}</div>
-      <div class="prize-status-label">${done?'授与済み':'未達成'}</div>
+      <div class="prize-status-label">${done?t('授与済み'):t('未達成')}</div>
     </div>`;
   return card;
 }
@@ -3402,13 +3445,13 @@ function renderVisitedWalks() {
     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
   if (visits.length === 0) {
-    body.innerHTML = `<div class="empty-prizes"><div class="empty-icon">📍</div>訪問履歴はまだありません。</div>`;
+    body.innerHTML = `<div class="empty-prizes"><div class="empty-icon">📍</div>${t('訪問履歴はまだありません。')}</div>`;
     return;
   }
 
   const lbl = document.createElement('div');
   lbl.className = 'prizes-section-label';
-  lbl.textContent = `VISITED — ${visits.length}件`;
+  lbl.textContent = tf('VISITED — {n}件', {n: visits.length});
   body.appendChild(lbl);
 
   const list = document.createElement('div');
@@ -3421,7 +3464,7 @@ function makeVisitedCard(visit) {
   const pref = visit.prefecture || visit.pref || '';
   const city = visit.city || '';
   const area = visit.area || visit.area_name || visit.name || '';
-  const date = visit.date ? formatDate(visit.date) : '記録なし';
+  const date = visit.date ? formatDate(visit.date) : t('記録なし');
 
   const card = document.createElement('div');
   card.className = 'visited-card';
@@ -3429,18 +3472,18 @@ function makeVisitedCard(visit) {
   const info = document.createElement('div');
   const prefEl = document.createElement('div');
   prefEl.className = 'visited-pref';
-  prefEl.textContent = pref || '県未設定';
+  prefEl.textContent = pref || t('県未設定');
   const cityEl = document.createElement('div');
   cityEl.className = 'visited-city';
-  cityEl.textContent = city || visit.name || '市区町村未設定';
+  cityEl.textContent = city || visit.name || t('市区町村未設定');
   const areaEl = document.createElement('div');
   areaEl.className = 'visited-area';
-  areaEl.textContent = area || 'エリア未設定';
+  areaEl.textContent = area || t('エリア未設定');
   info.append(prefEl, cityEl, areaEl);
 
   const dateEl = document.createElement('div');
   dateEl.className = 'visited-date';
-  dateEl.innerHTML = '最終訪問';
+  dateEl.innerHTML = t('最終訪問');
   const dateValue = document.createElement('span');
   dateValue.textContent = date;
   dateEl.appendChild(dateValue);
@@ -3460,7 +3503,7 @@ function renderStamps() {
   const body = document.getElementById('prizes-body'); body.innerHTML='';
 
   const savedStamps = Object.entries(prizes).map(([pid, val]) => {
-    const name = prizeCourse(val) || allCourses.find(c => pid === coursePrizeId(c) || pid === legacyPrizeId(c))?.course_name || 'まち歩きコース';
+    const name = prizeCourse(val) || allCourses.find(c => pid === coursePrizeId(c) || pid === legacyPrizeId(c))?.course_name || t('まち歩きコース');
     return { name, val, done: !!prizeDate(val) };
   }).filter(i => i.done);
   const lockedStamps = allCourses.filter(c => !prizeForCourse(prizes, c)).map(c => ({ name: c.course_name, val: null, done: false }));
@@ -3469,7 +3512,7 @@ function renderStamps() {
   const totalCount = stampItems.length;
 
   if (totalCount === 0) {
-    body.innerHTML=`<div class="stamps-empty"><div class="empty-icon">🔖</div>コースデータがありません。</div>`;
+    body.innerHTML=`<div class="stamps-empty"><div class="empty-icon">🔖</div>${t('コースデータがありません。')}</div>`;
     return;
   }
 
@@ -3502,7 +3545,7 @@ function renderStamps() {
   body.appendChild(book);
 
   const total = document.createElement('div'); total.className='stamps-total';
-  total.innerHTML=`達成 <span>${completedCount}</span> / ${totalCount} コース`;
+  total.innerHTML=tf('達成 <span>{a}</span> / {b} コース', {a: completedCount, b: totalCount});
   body.appendChild(total);
 }
 
@@ -3554,7 +3597,7 @@ function initGoogleAuth() {
     client_id: GOOGLE_CLIENT_ID,
     scope: DRIVE_SCOPE,
     callback: async (resp) => {
-      if (resp.error) { showSyncStatus('error', 'ログインに失敗しました'); return; }
+      if (resp.error) { showSyncStatus('error', t('ログインに失敗しました')); return; }
       gAccessToken = resp.access_token;
       gTokenExpiry  = Date.now() + (resp.expires_in - 60) * 1000;
       await fetchGUserInfo();
@@ -3568,7 +3611,7 @@ function initGoogleAuth() {
     gUserEmail = saved.email;
     updateCloudUI();
     // サイレントでトークンを再取得して自動同期（ユーザー操作不要）
-    showSyncStatus('syncing', '同期中…');
+    showSyncStatus('syncing', t('同期中…'));
     const silentClient = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
       scope: DRIVE_SCOPE,
@@ -3578,14 +3621,14 @@ function initGoogleAuth() {
           gTokenExpiry  = Date.now() + (resp.expires_in - 60) * 1000;
           await syncCloud();
         } else {
-          showSyncStatus('idle', '再ログインで同期できます');
+          showSyncStatus('idle', t('再ログインで同期できます'));
         }
       }
     });
     try {
       silentClient.requestAccessToken({ prompt: '' }); // ポップアップなしで試みる
     } catch(e) {
-      showSyncStatus('idle', '再ログインで同期できます');
+      showSyncStatus('idle', t('再ログインで同期できます'));
     }
   }
 }
@@ -3605,7 +3648,7 @@ async function fetchGUserInfo() {
 // ── サインイン ──
 function signIn() {
   if (!gTokenClient) {
-    showModal('設定が必要です', 'GOOGLE_CLIENT_IDをHTMLファイルに設定してください。', '閉じる', '', hideModal, null);
+    showModal(t('設定が必要です'), t('GOOGLE_CLIENT_IDをHTMLファイルに設定してください。'), t('閉じる'), '', hideModal, null);
     return;
   }
   gTokenClient.requestAccessToken({ prompt: 'consent' });
@@ -3614,9 +3657,9 @@ function signIn() {
 // ── サインアウト確認 ──
 function confirmSignOut() {
   showModal(
-    'ログアウトしますか？',
-    'Googleアカウントとの連携を解除します。\nローカルのデータは保持されます。',
-    'ログアウト', 'キャンセル',
+    t('ログアウトしますか？'),
+    t('Googleアカウントとの連携を解除します。\nローカルのデータは保持されます。'),
+    t('ログアウト'), t('キャンセル'),
     signOut, null
   );
 }
@@ -3762,11 +3805,11 @@ function mergeBackup(cloud, local) {
 // ── 同期メイン処理 ──
 async function syncCloud() {
   if (!isSignedIn()) return; // 未ログインは何もしない
-  showSyncStatus('syncing', '同期中…');
+  showSyncStatus('syncing', t('同期中…'));
 
   try {
     if (!await ensureToken()) {
-      showSyncStatus('idle', '再ログインが必要です');
+      showSyncStatus('idle', t('再ログインが必要です'));
       return;
     }
 
@@ -3792,14 +3835,14 @@ async function syncCloud() {
 
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
-    showSyncStatus('ok', `同期完了 ${timeStr}`);
+    showSyncStatus('ok', tf('同期完了 {time}', {time: timeStr}));
     lsSet('lwg_last_sync', now.toISOString());
 
     // ホーム画面が表示中なら再描画
     if (document.getElementById('screen-home').classList.contains('active')) renderHome();
   } catch(e) {
     console.error('Sync error:', e);
-    const msg = e.message === 'token_unavailable' ? '再ログインが必要です' : '同期に失敗しました';
+    const msg = e.message === 'token_unavailable' ? t('再ログインが必要です') : t('同期に失敗しました');
     showSyncStatus('error', msg);
   }
 }
@@ -3816,9 +3859,9 @@ function updateCloudUI() {
     const lastSync = lsGet('lwg_last_sync', null);
     if (lastSync) {
       const d = new Date(lastSync);
-      showSyncStatus('ok', `前回同期 ${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`);
+      showSyncStatus('ok', tf('前回同期 {when}', {when: `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`}));
     } else {
-      showSyncStatus('idle', '未同期');
+      showSyncStatus('idle', t('未同期'));
     }
   } else {
     loginArea.style.display = 'flex';
