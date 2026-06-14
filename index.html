@@ -3231,7 +3231,7 @@ function showGoal() {
   }
 
   // クラウド自動同期（完走時）
-  setTimeout(() => syncCloud(), 1500);
+  setTimeout(() => syncCloud({ background: true }), 1500);
 }
 
 // ══════════════════════════════════════
@@ -3633,6 +3633,9 @@ let gTokenExpiry  = 0;
 let gTokenClient  = null;
 let gUserEmail    = '';
 let gBackupFileId = null;
+let cloudSyncInFlight = false;
+let cloudLastSyncAttempt = 0;
+const CLOUD_BACKGROUND_MIN_MS = 10 * 60 * 1000;
 
 // ── 初期化 ──
 function initGoogleAuth() {
@@ -3662,6 +3665,8 @@ function initGoogleAuth() {
   if (saved?.email) {
     gUserEmail = saved.email;
     updateCloudUI();
+    showSyncStatus('idle', t('必要なときに同期できます'));
+    return;
     // サイレントでトークンを再取得して自動同期（ユーザー操作不要）
     showSyncStatus('syncing', t('同期中…'));
     const silentClient = google.accounts.oauth2.initTokenClient({
@@ -3843,9 +3848,18 @@ function mergeBackup(cloud, local) {
 }
 
 // ── 同期メイン処理 ──
-async function syncCloud() {
-  if (!isSignedIn()) return; // 未ログインは何もしない
-  showSyncStatus('syncing', t('同期中…'));
+async function syncCloud(options = {}) {
+  const background = !!options.background;
+  const nowMs = Date.now();
+  if (!isSignedIn()) return;
+  if (cloudSyncInFlight) {
+    if (!background) showSyncStatus('idle', t('同期中です'));
+    return;
+  }
+  if (background && nowMs - cloudLastSyncAttempt < CLOUD_BACKGROUND_MIN_MS) return;
+  cloudSyncInFlight = true;
+  cloudLastSyncAttempt = nowMs;
+  showSyncStatus('syncing', background ? t('バックアップ中…') : t('同期中…'));
 
   try {
     if (!await ensureToken()) {
@@ -3884,6 +3898,8 @@ async function syncCloud() {
     console.error('Sync error:', e);
     const msg = e.message === 'token_unavailable' ? t('再ログインが必要です') : t('同期に失敗しました');
     showSyncStatus('error', msg);
+  } finally {
+    cloudSyncInFlight = false;
   }
 }
 
