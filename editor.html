@@ -1697,6 +1697,17 @@ function syncMapFromEditedRow(sheet,rowIdx){
   if(sheet==='facilities') showFacilityMap(row);
 }
 
+function selectTableRowOnMap(sn,idx,tr,mapBtn,row){
+  if(sn!=='spots' && sn!=='facilities') return;
+  document.querySelectorAll('.sel-row').forEach(r=>r.classList.remove('sel-row'));
+  tr.classList.add('sel-row');
+  selectedRow[sn]=idx;
+  document.querySelectorAll('.btn-map.active').forEach(b=>b.classList.remove('active'));
+  mapBtn.classList.add('active');
+  if(sn==='spots') showSpotMap(row);
+  else showFacilityMap(row);
+}
+
 function mkRow(sn,schema,row,origRow,idx){
   const tr=document.createElement('tr');
   const tn=document.createElement('td');tn.className='td-n';tn.textContent=idx+1;tr.appendChild(tn);
@@ -1742,18 +1753,18 @@ function mkRow(sn,schema,row,origRow,idx){
   const ta=document.createElement('td');ta.className='td-act';
   const mapBtn=document.createElement('button');mapBtn.className='btn-map btn-xs';mapBtn.textContent='🗺';
   mapBtn.title=sn==='spots'?`${row.spot_name||'このスポット'}を地図表示`:`${row.facility_name||'この施設'}を地図表示`;
-  mapBtn.onclick=()=>{
-    document.querySelectorAll('.sel-row').forEach(r=>r.classList.remove('sel-row'));
-    tr.classList.add('sel-row');
-    selectedRow[sn]=idx;
-    document.querySelectorAll('.btn-map.active').forEach(b=>b.classList.remove('active'));
-    mapBtn.classList.add('active');
-    if(sn==='spots') showSpotMap(row);
-    else showFacilityMap(row);
-  };
+  mapBtn.onclick=()=>selectTableRowOnMap(sn,idx,tr,mapBtn,row);
   const delBtn=document.createElement('button');delBtn.className='btn-ico btn-xs';delBtn.innerHTML='✕';delBtn.title='削除';delBtn.style.cssText='margin-left:2px;border:1px solid var(--border);border-radius:3px;';
   delBtn.onclick=()=>{if(!confirm(`${idx+1}行目を削除しますか？`))return;state[sn].splice(idx,1);renderTable(sn);};
   ta.appendChild(mapBtn);ta.appendChild(delBtn);tr.appendChild(ta);
+  tr.addEventListener('click',e=>{
+    if(e.target.closest('.td-act')) return;
+    selectTableRowOnMap(sn,idx,tr,mapBtn,row);
+  });
+  tr.addEventListener('focusin',e=>{
+    if(e.target.closest('.td-act')) return;
+    selectTableRowOnMap(sn,idx,tr,mapBtn,row);
+  });
   return tr;
 }
 
