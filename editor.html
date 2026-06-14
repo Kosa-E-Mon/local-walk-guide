@@ -1799,7 +1799,7 @@ function showRpMap(){
   document.getElementById('btn-lbl-toggle').style.display='none';
   document.getElementById('map-legend').innerHTML='<div class="map-empty" style="height:36px;"><span style="font-size:10px;color:var(--dim);">行の🗺ボタンをクリックすると地図が表示されます</span></div>';
   initLeaflet();
-  clearMap();
+  renderCurrentSheetMap();
 }
 
 function initLeaflet(){
@@ -1874,6 +1874,76 @@ function showCourseMap(courseId){
     <div class="legend-item"><div class="legend-line" style="background:#2A5A8A;opacity:.6;border-top:1.5px dashed #2A5A8A;"></div>接近エリア</div>
     <div class="legend-item"><div class="legend-line" style="background:#B83232;opacity:.7;"></div>到着判定エリア</div>
   `;
+}
+
+function refreshRightPanel(){
+  if(currentTab==='config'){updateConfigPreview();}
+  else{renderCurrentSheetMap();notify('地図を再表示しました');}
+}
+
+function renderCurrentSheetMap(){
+  if(currentTab==='spots') showAllSpotsMap();
+  else if(currentTab==='facilities') showAllFacilitiesMap();
+  else clearMap();
+}
+
+function showAllSpotsMap(){
+  mapEditContext=null;
+  initLeaflet(); clearMap();
+  document.getElementById('rp-title').textContent='スポット一覧';
+  const coords=[];
+  state.spots.forEach((spot,i)=>{
+    const lat=parseFloat(spot.lat), lng=parseFloat(spot.lng);
+    if(isNaN(lat)||isNaN(lng)) return;
+    coords.push([lat,lng]);
+    const approachDist=parseInt(spot.approach_dist)||50;
+    const arriveDist=parseInt(spot.arrive_dist)||15;
+    L.circle([lat,lng],{radius:approachDist,color:'#2A5A8A',fillColor:'#2A5A8A',fillOpacity:0.06,weight:1.2,dashArray:'5 3'}).addTo(mapLayerGroup);
+    L.circle([lat,lng],{radius:arriveDist,color:'#B83232',fillColor:'#B83232',fillOpacity:0.16,weight:1.6}).addTo(mapLayerGroup);
+    const ic=L.divIcon({html:`<div style="background:#B83232;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid white;box-shadow:0 1px 5px rgba(0,0,0,.35);font-family:sans-serif;">${i+1}</div>`,iconSize:[22,22],iconAnchor:[11,11],className:''});
+    L.marker([lat,lng],{icon:ic}).addTo(mapLayerGroup).bindPopup(`<strong>${spot.spot_name||spot.spot_id||'スポット'}</strong><br>接近: ${approachDist}m 以内<br>到着: ${arriveDist}m 以内`);
+  });
+  fitMapToCoords(coords);
+  document.getElementById('map-legend').innerHTML=`
+    <div class="legend-item"><div class="legend-dot" style="background:#B83232;"></div>スポット ${coords.length}/${state.spots.length}</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#2A5A8A;opacity:.7;"></div>接近レンジ</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#B83232;opacity:.9;"></div>到着レンジ</div>
+    <div class="map-edit-help">一覧表示中です。個別に座標を入れる・修正する場合は、表の行の地図ボタンを押してから地図上をクリックしてください。</div>
+  `;
+}
+
+function showAllFacilitiesMap(){
+  mapEditContext=null;
+  initLeaflet(); clearMap();
+  document.getElementById('rp-title').textContent='施設一覧';
+  const coords=[];
+  state.facilities.forEach((facility,i)=>{
+    const lat=parseFloat(facility.lat), lng=parseFloat(facility.lng);
+    if(isNaN(lat)||isNaN(lng)) return;
+    coords.push([lat,lng]);
+    const trigDist=parseInt(facility.trigger_dist)||30;
+    L.circle([lat,lng],{radius:trigDist,color:'#C06010',fillColor:'#C06010',fillOpacity:0.12,weight:1.6,dashArray:'4 3'}).addTo(mapLayerGroup);
+    const ic=L.divIcon({html:`<div style="background:#C06010;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid white;box-shadow:0 1px 5px rgba(0,0,0,.35);font-family:sans-serif;">${i+1}</div>`,iconSize:[22,22],iconAnchor:[11,11],className:''});
+    L.marker([lat,lng],{icon:ic}).addTo(mapLayerGroup).bindPopup(`<strong>${facility.facility_name||facility.facility_id||'施設'}</strong><br>通知: ${trigDist}m 以内`);
+  });
+  fitMapToCoords(coords);
+  document.getElementById('map-legend').innerHTML=`
+    <div class="legend-item"><div class="legend-dot" style="background:#C06010;"></div>施設 ${coords.length}/${state.facilities.length}</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#C06010;opacity:.9;"></div>通知レンジ</div>
+    <div class="map-edit-help">一覧表示中です。個別に座標を入れる・修正する場合は、表の行の地図ボタンを押してから地図上をクリックしてください。</div>
+  `;
+}
+
+function fitMapToCoords(coords){
+  if(coords.length>1){
+    leafletMap.fitBounds(L.latLngBounds(coords),{padding:[24,24]});
+  }else if(coords.length===1){
+    leafletMap.setView(coords[0],17);
+  }else{
+    const [lat,lng,zoom]=getMapFallbackCenter();
+    leafletMap.setView([lat,lng],zoom);
+  }
+  setTimeout(()=>leafletMap.invalidateSize(),120);
 }
 
 function getMapFallbackCenter(){
@@ -2032,7 +2102,7 @@ async function copyGasCode(){
   catch(e){notify('コピーに失敗しました。手動でコードを選択してコピーしてください',true);}
 }
 
-const APP_BASE_URL = 'https://kosa-e-mon.github.io/local-walk-guide/';
+const APP_BASE_URL = 'https://kosa-e-mon.github.io/machi-aruki-guide/';
 
 function buildQrTargetUrl(){
   const raw=(document.getElementById('qr-sheet-url')?.value||'').trim();
@@ -2081,8 +2151,8 @@ function getQrCanvas(){
 }
 
 function qrFileName(){
-  const title=(getCfg('area_name')||getCfg('app_title')||'local-walk-guide').replace(/[\\/:*?"<>|]/g,'_').trim();
-  return (title||'local-walk-guide') + '_QR.png';
+  const title=(getCfg('area_name')||getCfg('app_title')||'machi-aruki-guide').replace(/[\\/:*?"<>|]/g,'_').trim();
+  return (title||'machi-aruki-guide') + '_QR.png';
 }
 
 function downloadQrPng(){
