@@ -1484,6 +1484,9 @@ function updateConfigPreview(){
 
 function renderCourses(){
   const body=document.getElementById('ed-body'); body.innerHTML='';
+  if(state.courses.length && !state.courses.some(c=>c.course_id===selectedRow.courses)){
+    selectedRow.courses=state.courses[0].course_id;
+  }
 
   // Change summary
   const totalChg=Object.keys(changes.courses).length+Object.keys(changes.course_spots).length;
@@ -1493,6 +1496,7 @@ function renderCourses(){
 
   state.courses.forEach((course,ci)=>{
     const card=document.createElement('div'); card.className='cc-card';
+    if(course.course_id===selectedRow.courses) card.classList.add('is-sel');
     const isRec=course.recommended==='TRUE'||course.recommended===true;
 
     // HEAD
@@ -1503,6 +1507,7 @@ function renderCourses(){
     const rec=document.createElement('span'); rec.className='cc-rec'; rec.textContent=isRec?'★ おすすめ':'';
     const meta=document.createElement('span'); meta.className='cc-meta'; meta.textContent=`${course.duration_min||'?'}分 / ${course.distance_m||'?'}m`;
     const mapBtn=document.createElement('button'); mapBtn.className='btn-map btn-xs'; mapBtn.textContent='🗺 地図';
+    if(course.course_id===selectedRow.courses) mapBtn.classList.add('active');
     mapBtn.onclick=e=>{e.stopPropagation();selectCourse(course.course_id,card,mapBtn);};
     head.appendChild(toggle); head.appendChild(name); head.appendChild(tag); head.appendChild(rec); head.appendChild(meta); head.appendChild(mapBtn);
 
@@ -1579,6 +1584,7 @@ function renderCourses(){
     // Toggle
     head.onclick=e=>{
       if(e.target===mapBtn||e.target.closest('.btn-map')) return;
+      selectCourse(course.course_id,card,mapBtn);
       const open=!cBody.classList.contains('open');
       cBody.classList.toggle('open',open);
       toggle.classList.toggle('open',open);
@@ -1821,6 +1827,7 @@ function refreshRightPanel(){
 }
 
 function selectCourse(courseId, card, btn){
+  selectedRow.courses=courseId;
   document.querySelectorAll('.cc-card.is-sel').forEach(c=>c.classList.remove('is-sel'));
   document.querySelectorAll('.btn-map.active').forEach(b=>b.classList.remove('active'));
   card.classList.add('is-sel'); btn.classList.add('active');
@@ -1882,9 +1889,42 @@ function refreshRightPanel(){
 }
 
 function renderCurrentSheetMap(){
-  if(currentTab==='spots') showAllSpotsMap();
+  if(currentTab==='courses') showSelectedCourseMap();
+  else if(currentTab==='spots') showSelectedSpotOnlyMap();
   else if(currentTab==='facilities') showAllFacilitiesMap();
   else clearMap();
+}
+
+function showSelectedCourseMap(){
+  const selectedId=selectedRow.courses && state.courses.some(c=>c.course_id===selectedRow.courses)
+    ? selectedRow.courses
+    : state.courses[0]?.course_id;
+  if(selectedId){
+    selectedRow.courses=selectedId;
+    showCourseMap(selectedId);
+  }else{
+    mapEditContext=null;
+    initLeaflet(); clearMap();
+    const [lat,lng,zoom]=getMapFallbackCenter();
+    leafletMap.setView([lat,lng],zoom);
+    document.getElementById('rp-title').textContent='コース';
+    document.getElementById('map-legend').innerHTML='<div class="map-edit-help">コースがありません。</div>';
+  }
+}
+
+function showSelectedSpotOnlyMap(){
+  const rowIdx=Number.isInteger(selectedRow.spots) ? selectedRow.spots : null;
+  const spot=rowIdx!==null ? state.spots[rowIdx] : null;
+  if(spot){
+    showSpotMap(spot);
+  }else{
+    mapEditContext=null;
+    initLeaflet(); clearMap();
+    const [lat,lng,zoom]=getMapFallbackCenter();
+    leafletMap.setView([lat,lng],zoom);
+    document.getElementById('rp-title').textContent='スポット';
+    document.getElementById('map-legend').innerHTML='<div class="map-edit-help">表示したいスポット行の地図ボタンを押してください。選んだスポットだけを表示します。</div>';
+  }
 }
 
 function showAllSpotsMap(){
