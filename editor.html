@@ -739,6 +739,11 @@ const CONFIG_DEFS = [
   {key:'cert_seal_line_height',  lbl:'印鑑行間',           desc:'--cert-seal-line-height。例: 1.5'},
   {sec:'🧭 ナビ設定'},
   {key:'next_lock_sec', lbl:'「次へ」ボタンロック秒数', desc:'到着時に「次へ」ボタンをロックする秒数（保険タイマー）。例: 30（0で無制限待機）'},
+  {key:'walk_speed_limit_kmh', lbl:'歩行カウント停止速度', desc:'この速度を超える移動は歩行距離に加算しません。例: 7', type:'num'},
+  {key:'walk_resume_kmh', lbl:'歩行カウント再開速度', desc:'乗り物判定後、この速度以下で歩行カウントを再開します。例: 5.5', type:'num'},
+  {key:'walk_speed_hits', lbl:'乗り物判定の連続回数', desc:'停止速度超過が何回続いたら乗り物モードにするか。例: 2', type:'num'},
+  {key:'walk_accuracy_max_m', lbl:'歩行加算GPS最大誤差', desc:'GPS精度がこのm数より悪い時は歩行距離に加算しません。例: 50', type:'num'},
+  {key:'walk_segment_max_m', lbl:'歩行加算最大区間距離', desc:'1回のGPS更新でこのm数以上動いた場合はワープ扱いで加算しません。例: 50', type:'num'},
 ];
 
 const COURSE_FIELDS = [
