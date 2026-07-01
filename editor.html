@@ -154,6 +154,35 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 .td-au .c-in{flex:1;padding:4px 6px;}
 .add-row-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:8px;margin-top:9px;background:var(--surface);border:2px dashed var(--border2);border-radius:6px;color:var(--muted);font-size:12px;cursor:pointer;width:100%;transition:all .15s;font-weight:500;}
 .add-row-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-l);}
+.view-mode-controls{display:none;align-items:center;border:1px solid var(--border2);border-radius:6px;overflow:hidden;background:var(--raised);}
+.view-mode-btn{border:0;border-right:1px solid var(--border2);background:transparent;color:var(--muted);font-family:var(--sans);font-size:11px;padding:5px 10px;cursor:pointer;}
+.view-mode-btn:last-child{border-right:0;}
+.view-mode-btn.active{background:var(--blue);color:#fff;}
+.record-view{display:grid;grid-template-columns:220px minmax(0,1fr);gap:14px;min-height:100%;}
+.record-list{border-right:1px solid var(--border);padding-right:14px;}
+.record-list-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:11px;font-weight:600;color:var(--muted);}
+.record-list-items{display:flex;flex-direction:column;gap:4px;}
+.record-list-item{width:100%;border:1px solid var(--border);border-radius:5px;background:var(--surface);padding:8px 9px;text-align:left;cursor:pointer;color:var(--text);font-family:var(--sans);}
+.record-list-item:hover{border-color:var(--blue);}
+.record-list-item.active{border-color:var(--blue);background:var(--blue-l);box-shadow:inset 3px 0 0 var(--blue);}
+.record-list-name{display:block;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.record-list-id{display:block;font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.record-form{min-width:0;}
+.record-form-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.record-form-title{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.record-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;}
+.record-field{min-width:0;}
+.record-field.wide{grid-column:1/-1;}
+.record-field-label{font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;}
+.record-field-key{font-family:var(--mono);font-size:8px;color:var(--gold);margin-left:5px;}
+.record-field-desc{font-size:9px;color:var(--dim);line-height:1.4;margin-bottom:4px;}
+.record-field-input{width:100%;min-width:0;background:var(--surface);border:1.5px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:11px;padding:7px 9px;outline:none;}
+.record-field-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-m);}
+.record-field.changed .record-field-input{background:var(--changed);border-color:var(--changed-b);}
+.record-audio-row{display:flex;align-items:center;gap:6px;}
+.record-audio-row .record-field-input{flex:1;}
+.record-empty{display:flex;align-items:center;justify-content:center;min-height:240px;color:var(--dim);font-size:12px;text-align:center;}
+@media(max-width:900px){.record-view{grid-template-columns:170px minmax(0,1fr)}.record-form-grid{grid-template-columns:1fr}.record-field.wide{grid-column:auto}}
 
 /* COURSES MERGED VIEW */
 .course-cards{max-width:860px;}
@@ -424,6 +453,10 @@ table.dt{font-size:calc(var(--editor-font-size) - 2px);}
     <div class="ed-bar">
       <span class="ed-bar-title" id="ed-title">SHEET: <em>CONFIG（設定）</em></span>
       <span class="chg-badge" id="chg-badge">変更あり</span>
+      <div class="view-mode-controls" id="view-mode-controls">
+        <button class="view-mode-btn active" id="view-mode-table" onclick="setTableViewMode('table')">表</button>
+        <button class="view-mode-btn" id="view-mode-form" onclick="setTableViewMode('form')">フォーム</button>
+      </div>
       <div class="spacer"></div>
       <button class="btn btn-o btn-sm" onclick="exportCurrentSheet()">⬇ CSVダウンロード</button>
       <button class="btn btn-g btn-sm" id="save-btn" style="display:none" onclick="saveCurrentSheet()">💾 スプレッドシートに保存</button>
@@ -814,6 +847,7 @@ let leafletMap=null, mapLayerGroup=null;
 let selectedRow={courses:null, spots:null, facilities:null};
 let mapEditContext=null;
 let navGuardReady=false;
+const tableViewMode={spots:'table',facilities:'table'};
 
 // ═══════════════════════════════════════════════════════
 // CSV / UTILITIES
@@ -1017,6 +1051,7 @@ function showTab(tab){
   document.querySelectorAll('.nav-it').forEach(el=>el.classList.remove('active'));
   document.getElementById('nav-'+tab)?.classList.add('active');
   document.getElementById('config-rail')?.classList.toggle('show', tab==='config');
+  updateViewModeControls(tab);
   document.getElementById('ed-title').innerHTML=`SHEET: <em>${TAB_LABELS[tab]||tab}</em>`;
   if(!state.loaded){document.getElementById('ed-body').innerHTML='<div class="empty-st"><div class="empty-ic">📂</div>先にデータを読み込んでください</div>';return;}
   if(tab==='config'){renderConfig();showRpConfig();}
@@ -1024,6 +1059,25 @@ function showTab(tab){
   else if(tab==='spots'){renderTable('spots');showRpMap();}
   else if(tab==='facilities'){renderTable('facilities');showRpMap();}
   updateChgBadge(tab);
+}
+
+function updateViewModeControls(tab){
+  const controls=document.getElementById('view-mode-controls');
+  const enabled=tab==='spots'||tab==='facilities';
+  if(!controls) return;
+  controls.style.display=enabled?'flex':'none';
+  if(!enabled) return;
+  document.getElementById('view-mode-table')?.classList.toggle('active',tableViewMode[tab]==='table');
+  document.getElementById('view-mode-form')?.classList.toggle('active',tableViewMode[tab]==='form');
+}
+
+function setTableViewMode(mode){
+  if(currentTab!=='spots'&&currentTab!=='facilities') return;
+  tableViewMode[currentTab]=mode==='form'?'form':'table';
+  if(tableViewMode[currentTab]==='form'&&!Number.isInteger(selectedRow[currentTab])) selectedRow[currentTab]=0;
+  updateViewModeControls(currentTab);
+  renderTable(currentTab);
+  renderCurrentSheetMap();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1667,6 +1721,12 @@ function renderTable(sn){
   const chgCount=Object.keys(changes[sn]).length;
   if(chgCount>0) body.appendChild(makeChgPanel(Object.entries(changes[sn])));
 
+  if(tableViewMode[sn]==='form'){
+    renderRecordForm(sn,schema,rows,origRows,body);
+    updateChgBadge(sn);
+    return;
+  }
+
   const wrap=document.createElement('div'); wrap.className='tbl-wrap';
   const tbl=document.createElement('table'); tbl.className='dt';
   const thead=document.createElement('thead'),tr=document.createElement('tr');
@@ -1683,6 +1743,89 @@ function renderTable(sn){
   addBtn.innerHTML='＋ 行を追加'; addBtn.onclick=()=>addRow(sn);
   wrap.appendChild(addBtn); body.appendChild(wrap);
   updateChgBadge(sn);
+}
+
+function renderRecordForm(sn,schema,rows,origRows,body){
+  if(rows.length&&(!Number.isInteger(selectedRow[sn])||selectedRow[sn]>=rows.length)) selectedRow[sn]=0;
+  if(!rows.length) selectedRow[sn]=null;
+
+  const view=document.createElement('div');view.className='record-view';
+  const list=document.createElement('aside');list.className='record-list';
+  const listHead=document.createElement('div');listHead.className='record-list-head';
+  const count=document.createElement('span');count.textContent=`一覧（${rows.length}件）`;
+  const newBtn=document.createElement('button');newBtn.className='btn btn-p btn-xs';newBtn.textContent='＋ 新規';newBtn.onclick=()=>addRow(sn);
+  listHead.appendChild(count);listHead.appendChild(newBtn);list.appendChild(listHead);
+  const items=document.createElement('div');items.className='record-list-items';
+  rows.forEach((row,idx)=>{
+    const btn=document.createElement('button');btn.className='record-list-item'+(idx===selectedRow[sn]?' active':'');
+    const nameKey=sn==='spots'?'spot_name':'facility_name';
+    const idKey=sn==='spots'?'spot_id':'facility_id';
+    btn.innerHTML=`<span class="record-list-name"></span><span class="record-list-id"></span>`;
+    btn.querySelector('.record-list-name').textContent=row[nameKey]||`名称未設定 ${idx+1}`;
+    btn.querySelector('.record-list-id').textContent=row[idKey]||'ID未設定';
+    btn.onclick=()=>{selectedRow[sn]=idx;renderTable(sn);if(sn==='spots')showSpotMap(row);else showFacilityMap(row);};
+    items.appendChild(btn);
+  });
+  list.appendChild(items);view.appendChild(list);
+
+  const form=document.createElement('section');form.className='record-form';
+  const idx=selectedRow[sn];
+  const row=Number.isInteger(idx)?rows[idx]:null;
+  if(!row){
+    const empty=document.createElement('div');empty.className='record-empty';empty.textContent='「＋ 新規」から登録を始めてください。';form.appendChild(empty);
+  }else{
+    const origRow=origRows[idx]||{};
+    const nameKey=sn==='spots'?'spot_name':'facility_name';
+    const head=document.createElement('div');head.className='record-form-head';
+    const title=document.createElement('div');title.className='record-form-title';title.textContent=row[nameKey]||`名称未設定 ${idx+1}`;
+    const spacer=document.createElement('div');spacer.className='spacer';
+    const mapBtn=document.createElement('button');mapBtn.className='btn btn-blue btn-sm';mapBtn.textContent='地図で確認';mapBtn.onclick=()=>sn==='spots'?showSpotMap(row):showFacilityMap(row);
+    const delBtn=document.createElement('button');delBtn.className='btn btn-o btn-sm';delBtn.textContent='削除';
+    delBtn.onclick=()=>{if(!confirm(`${idx+1}行目を削除しますか？`))return;rows.splice(idx,1);selectedRow[sn]=Math.min(idx,rows.length-1);renderTable(sn);renderCurrentSheetMap();};
+    head.appendChild(title);head.appendChild(spacer);head.appendChild(mapBtn);head.appendChild(delBtn);form.appendChild(head);
+
+    const grid=document.createElement('div');grid.className='record-form-grid';
+    schema.forEach(col=>grid.appendChild(makeRecordField(sn,row,origRow,idx,col,title,items)));
+    form.appendChild(grid);
+  }
+  view.appendChild(form);body.appendChild(view);
+}
+
+function makeRecordField(sn,row,origRow,idx,col,title,listItems){
+  const val=row[col.key]||'',origVal=origRow[col.key]||'';
+  const wide=col.type==='audio'||['description','announce_text','keywords','photo_url'].includes(col.key);
+  const field=document.createElement('label');field.className='record-field'+(wide?' wide':'')+(val!==origVal?' changed':'');
+  const label=document.createElement('div');label.className='record-field-label';label.textContent=col.lbl;
+  const key=document.createElement('span');key.className='record-field-key';key.textContent=col.key;label.appendChild(key);field.appendChild(label);
+  if(col.desc){const desc=document.createElement('div');desc.className='record-field-desc';desc.textContent=col.desc;field.appendChild(desc);}
+
+  let el;
+  if(col.type==='bool'||(col.type==='sel'&&col.opts)){
+    el=document.createElement('select');
+    const values=col.type==='bool'?['','TRUE','FALSE']:['',...col.opts];
+    values.forEach(v=>{const option=document.createElement('option');option.value=v;option.textContent=v||'—';if(v===val)option.selected=true;el.appendChild(option);});
+  }else if(['description','announce_text'].includes(col.key)){
+    el=document.createElement('textarea');el.rows=4;el.value=val;
+  }else{
+    el=document.createElement('input');el.type='text';el.value=val;
+  }
+  el.className='record-field-input';bindCellMeta(el,sn,idx,col.key,origVal);
+  const eventName=el.tagName==='SELECT'?'change':'input';
+  el.addEventListener(eventName,()=>{
+    row[col.key]=el.value;
+    field.classList.toggle('changed',el.value!==origVal);
+    recChg(sn,`${idx+1}行目:${col.lbl}`,origVal,el.value);
+    syncMapFromEditedRow(sn,idx);
+    const nameKey=sn==='spots'?'spot_name':'facility_name';
+    const idKey=sn==='spots'?'spot_id':'facility_id';
+    if(col.key===nameKey){title.textContent=el.value||`名称未設定 ${idx+1}`;listItems.children[idx]?.querySelector('.record-list-name')?.replaceChildren(document.createTextNode(el.value||`名称未設定 ${idx+1}`));}
+    if(col.key===idKey)listItems.children[idx]?.querySelector('.record-list-id')?.replaceChildren(document.createTextNode(el.value||'ID未設定'));
+  });
+
+  if(col.type==='audio'){
+    const audioRow=document.createElement('div');audioRow.className='record-audio-row';audioRow.appendChild(el);audioRow.appendChild(mkPlayBtn(()=>el.value,col.lbl));field.appendChild(audioRow);
+  }else field.appendChild(el);
+  return field;
 }
 
 function mkTh(tr,html,cls){const th=document.createElement('th');th.innerHTML=html;if(cls)th.className=cls;tr.appendChild(th);return th;}
@@ -1784,6 +1927,14 @@ function addRow(sn){
   const schema=SCHEMAS[sn];if(!schema)return;
   const nr={};schema.forEach(c=>{nr[c.key]='';});state[sn].push(nr);
   updateBadge(sn);
+  if(tableViewMode[sn]==='form'){
+    selectedRow[sn]=state[sn].length-1;
+    renderTable(sn);
+    if(sn==='spots') showSpotMap(nr);
+    else if(sn==='facilities') showFacilityMap(nr);
+    setTimeout(()=>document.querySelector('.record-form input,.record-form select,.record-form textarea')?.focus(),80);
+    return;
+  }
   const tb=document.getElementById('tbody-'+sn);
   if(tb){
     const newIdx=state[sn].length-1;
