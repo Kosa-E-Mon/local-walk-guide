@@ -458,6 +458,7 @@ table.dt{font-size:calc(var(--editor-font-size) - 2px);}
         <button class="view-mode-btn" id="view-mode-form" onclick="setTableViewMode('form')">フォーム</button>
       </div>
       <div class="spacer"></div>
+      <button class="btn btn-blue btn-sm" onclick="openMediaUploader()">⇧ メディア変換</button>
       <button class="btn btn-o btn-sm" onclick="exportCurrentSheet()">⬇ CSVダウンロード</button>
       <button class="btn btn-g btn-sm" id="save-btn" style="display:none" onclick="saveCurrentSheet()">💾 スプレッドシートに保存</button>
     </div>
@@ -1030,6 +1031,10 @@ function updateChgBadge(sheet){
   const n=Object.keys(changes[sheet]||{}).length;
   const b=document.getElementById('chg-badge');
   if(b){b.classList.toggle('show',n>0);if(n>0)b.textContent=`${n}件の変更あり`;}
+}
+
+function openMediaUploader(){
+  window.open(new URL('media-uploader.html',location.href).href,'_blank','noopener');
 }
 
 function resetChanges(){
