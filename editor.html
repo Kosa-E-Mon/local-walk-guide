@@ -204,6 +204,8 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 .audit-grp-name{font-size:12px;font-weight:700;margin-bottom:4px;}
 .audit-files{font-family:var(--mono);font-size:10px;line-height:1.9;color:var(--accent);word-break:break-all;padding-left:12px;}
 .audit-files .opt{color:var(--dim);}
+.audit-files [data-fn]{cursor:pointer;}
+.audit-files [data-fn]:hover{text-decoration:underline;background:var(--accent-l);}
 .audit-empty{text-align:center;color:var(--green);font-weight:700;font-size:13px;padding:24px 0;}
 .record-empty{display:flex;align-items:center;justify-content:center;min-height:240px;color:var(--dim);font-size:12px;text-align:center;}
 @media(max-width:900px){.record-view{grid-template-columns:170px minmax(0,1fr)}.record-form-grid{grid-template-columns:1fr}.record-field.wide{grid-column:auto}}
@@ -483,6 +485,7 @@ table.dt{font-size:calc(var(--editor-font-size) - 2px);}
       </div>
       <div class="spacer"></div>
       <button class="btn btn-blue btn-sm" onclick="openMediaUploader()">⇧ メディア変換</button>
+      <button class="btn btn-o btn-sm" onclick="window.open('https://aistudio.google.com/generate-speech','_blank')">🎙 音声作成 (AI Studio)</button>
       <button class="btn btn-o btn-sm" onclick="runMediaAudit()">🔍 メディア一括チェック</button>
       <button class="btn btn-o btn-sm" onclick="exportCurrentSheet()">⬇ CSVダウンロード</button>
       <button class="btn btn-g btn-sm" id="save-btn" style="display:none" onclick="saveCurrentSheet()">💾 スプレッドシートに保存</button>
@@ -1944,11 +1947,20 @@ async function runMediaAudit(){
     const files=items.map(r=>{
       const fn=r.url.split('/').pop();
       const opt=AUDIT_OPTIONAL.has(r.col);
-      return `<div class="${opt?'opt':''}">✗ ${esc(fn)}（${esc(AUDIT_ROLE_LBL[r.col]||r.col)}${opt?'・任意':''}${r.note?'・'+r.note:''}）</div>`;
+      return `<div class="${opt?'opt':''}" data-fn="${esc(fn)}" title="クリックでファイル名をコピー">✗ ${esc(fn)}（${esc(AUDIT_ROLE_LBL[r.col]||r.col)}${opt?'・任意':''}${r.note?'・'+r.note:''}）</div>`;
     }).join('');
     return `<div class="audit-grp"><div class="audit-grp-name">${esc(g)}</div><div class="audit-files">${files}</div></div>`;
   }).join('');
-  ov.innerHTML=`<div class="audit-box"><div class="audit-head">🔍 メディア一括チェック結果<div class="spacer"></div><button class="btn btn-o btn-sm" onclick="this.closest('.audit-ov').remove()">閉じる</button></div><div class="audit-body"><div class="audit-sum"><span class="ok">✓ ${okCount}件 OK</span>　<span class="ng">✗ ${missing.length}件 未アップロード</span>（全${results.length}件を確認）<br><small>下のファイル名でアップロードすれば、シートに触れず自動で反映されます。灰色は任意項目です。</small></div>${missing.length?grpHtml:'<div class="audit-empty">🎉 すべてのメディアが揃っています</div>'}</div></div>`;
+  ov.innerHTML=`<div class="audit-box"><div class="audit-head">🔍 メディア一括チェック結果<div class="spacer"></div><button class="btn btn-o btn-sm" onclick="window.open('https://aistudio.google.com/generate-speech','_blank')">🎙 音声作成 (AI Studio)</button><button class="btn btn-o btn-sm" onclick="this.closest('.audit-ov').remove()">閉じる</button></div><div class="audit-body"><div class="audit-sum"><span class="ok">✓ ${okCount}件 OK</span>　<span class="ng">✗ ${missing.length}件 未アップロード</span>（全${results.length}件を確認）<br><small>ファイル名をクリックするとコピーできます。その名前でアップロードすれば、シートに触れず自動で反映されます。灰色は任意項目です。音声はAI Studioで生成→「⇧ メディア変換」でアップロードできます。</small></div>${missing.length?grpHtml:'<div class="audit-empty">🎉 すべてのメディアが揃っています</div>'}</div></div>`;
+  const copyFn=t=>{
+    const legacy=()=>{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');notify('コピーしました: '+t,'ok');}catch(e){}ta.remove();};
+    if(navigator.clipboard) navigator.clipboard.writeText(t).then(()=>notify('コピーしました: '+t,'ok')).catch(legacy);
+    else legacy();
+  };
+  ov.addEventListener('click',e=>{
+    const d=e.target.closest('[data-fn]');
+    if(d) copyFn(d.dataset.fn);
+  });
   document.body.appendChild(ov);
 }
 
