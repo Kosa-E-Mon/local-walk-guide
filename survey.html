@@ -440,7 +440,7 @@ const KM = (()=>{
     'ジャ':'ja','ジュ':'ju','ジョ':'jo',
     'ビャ':'bya','ビョ':'byo','ピャ':'pya','ピョ':'pyo',
     'ァ':'a','ィ':'i','ゥ':'u','ェ':'e','ォ':'o',
-    'ッ':'x','ー':'-',
+    'ッ':'x','ー':'',
   };
   const m={};
   Object.entries(b).forEach(([k,v])=>{
@@ -464,11 +464,11 @@ function toRomaji(str){
     if(t!==undefined){out+=t;i+=2;continue;}
     const o=KM[s[i]];
     if(o!==undefined){out+=o;i++;continue;}
-    if(/[ \u3000]/.test(s[i])){out+='_';i++;continue;}
-    if(/[a-zA-Z0-9_-]/.test(s[i])){out+=s[i].toLowerCase();i++;continue;}
+    if(/[ \u3000-]/.test(s[i])){out+='_';i++;continue;}
+    if(/[a-zA-Z0-9_]/.test(s[i])){out+=s[i].toLowerCase();i++;continue;}
     i++;
   }
-  return out.replace(/_+/g,'_').replace(/^_|_$/g,'').replace(/-+/g,'-').toLowerCase().slice(0,40);
+  return out.replace(/_+/g,'_').replace(/^_|_$/g,'').toLowerCase().slice(0,40);
 }
 
 // =========================================================
@@ -673,9 +673,9 @@ function checkId(p,type){
   const inp=document.getElementById(p+'-id'), msg=document.getElementById(p+'-id-msg');
   const val=inp.value.trim();
   if(!val){inp.className='field-in mono';msg.className='id-msg';return;}
-  if(!/^[a-zA-Z0-9_-]+$/.test(val)){
+  if(!/^[a-z][a-z0-9_]*$/.test(val)){
     inp.className='field-in mono err'; msg.className='id-msg dup';
-    msg.textContent='⚠ 半角英数字 _ - のみ使用可'; return;
+    msg.textContent='⚠ 小文字英数字と _ のみ、先頭は英字'; return;
   }
   const arr=type==='spot'?S.spots:S.facilities;
   const key=type==='spot'?'spot_id':'facility_id';
@@ -730,7 +730,7 @@ async function submitSpot(){
   const name=document.getElementById('s-name').value.trim();
   const editing=S.edit&&S.edit.type==='spot';
   if(!id||!name){toast('名前とIDを入力してください','err');return;}
-  if(!/^[a-zA-Z0-9_-]+$/.test(id)){toast('IDの形式が不正です','err');return;}
+  if(!/^[a-z][a-z0-9_]*$/.test(id)){toast('IDの形式が不正です（小文字英数字と _ のみ、先頭は英字）','err');return;}
   if(S.spots.some(r=>r.spot_id===id&&(!editing||r.spot_id!==S.edit.id))){toast('このIDはすでに登録済みです','err');return;}
   if(!MK['s']){toast('位置情報を取得してください','err');return;}
   const pos=MK['s'].getLatLng();
@@ -765,7 +765,7 @@ async function submitFac(){
   const name=document.getElementById('f-name').value.trim();
   const editing=S.edit&&S.edit.type==='facility';
   if(!id||!name){toast('名前とIDを入力してください','err');return;}
-  if(!/^[a-zA-Z0-9_-]+$/.test(id)){toast('IDの形式が不正です','err');return;}
+  if(!/^[a-z][a-z0-9_]*$/.test(id)){toast('IDの形式が不正です（小文字英数字と _ のみ、先頭は英字）','err');return;}
   if(S.facilities.some(r=>r.facility_id===id&&(!editing||r.facility_id!==S.edit.id))){toast('このIDはすでに登録済みです','err');return;}
   if(!MK['f']){toast('位置情報を取得してください','err');return;}
   const pos=MK['f'].getLatLng();

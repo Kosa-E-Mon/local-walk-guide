@@ -1607,6 +1607,51 @@ async function fetchSheet(sid, sheet) {
   return text.replace(/^\uFEFF/, ''); // BOM除去
 }
 
+// URL規約導出: config.photo_repo / config.audio_repo（"owner/repo"形式）があれば、
+// 空欄のURL列を {ID}_{役割} の命名規則から自動生成する。記入済みURLは常に優先。
+// configにキーが無ければ何もしない＝挙動は従来どおり。
+function repoBaseUrl(repoKey) {
+  const v = String(cfg[repoKey] || '').trim();
+  if (!v || !v.includes('/')) return null;
+  const parts = v.split('/');
+  const owner = parts[0], repo = parts[1];
+  if (!owner || !repo) return null;
+  return `https://${owner}.github.io/${repo}`;
+}
+
+function derivePhotoUrl(id) {
+  if (!id) return null;
+  const base = repoBaseUrl('photo_repo');
+  return base ? `${base}/${id}.webp` : null;
+}
+
+function deriveAudioUrl(id, role) {
+  if (!id) return null;
+  const base = repoBaseUrl('audio_repo');
+  if (!base) return null;
+  return role ? `${base}/${id}_${role}.mp3` : `${base}/${id}.mp3`;
+}
+
+function applyUrlConventions() {
+  allSpots.forEach(function(s) {
+    s.photo_url          = s.photo_url          || derivePhotoUrl(s.spot_id);
+    s.audio_approach_url = s.audio_approach_url || deriveAudioUrl(s.spot_id, 'approach');
+    s.audio_arrive_url   = s.audio_arrive_url   || deriveAudioUrl(s.spot_id, 'arrive');
+    s.audio_start_url    = s.audio_start_url    || deriveAudioUrl(s.spot_id, 'start');
+    s.audio_next_url     = s.audio_next_url     || deriveAudioUrl(s.spot_id, 'next');
+    s.audio_goal_url     = s.audio_goal_url     || deriveAudioUrl(s.spot_id, 'goal');
+  });
+  allCourses.forEach(function(c) {
+    c.course_thumbnail_url = c.course_thumbnail_url || derivePhotoUrl(c.course_id);
+    c.audio_theme_url      = c.audio_theme_url      || deriveAudioUrl(c.course_id, 'start');
+    c.audio_finish_url     = c.audio_finish_url     || deriveAudioUrl(c.course_id, 'goal');
+  });
+  allFacilities.forEach(function(f) {
+    f.photo_url = f.photo_url || derivePhotoUrl(f.facility_id);
+    f.audio_url = f.audio_url || deriveAudioUrl(f.facility_id, null);
+  });
+}
+
 // ══════════════════════════════════════
 // 初期化
 // ══════════════════════════════════════
@@ -1670,6 +1715,8 @@ async function initApp() {
       lng: parseFloat(f.lng),
       trigger_dist: parseInt(f.trigger_dist) || 30,
     }));
+
+    applyUrlConventions();
 
     // 訪問記録
     recordVisit(currentSheetId, cfg.app_title || 'まち歩き');
