@@ -152,7 +152,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);max-width:48
 .st-msg.info{background:var(--amber-bg);color:var(--amber);border:1.5px solid var(--amber-bd);}
 
 /* TOAST */
-.toast{position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(-10px);background:var(--text);color:#fff;border-radius:24px;padding:11px 22px;font-size:14px;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:9999;opacity:0;transition:all .2s;white-space:nowrap;max-width:92vw;text-align:center;pointer-events:none;}
+.toast{position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(-10px);background:var(--text);color:#fff;border-radius:24px;padding:11px 22px;font-size:14px;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:9999;opacity:0;transition:all .2s;white-space:normal;line-height:1.6;max-width:92vw;text-align:center;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.ok{background:var(--green);}
 .toast.err{background:var(--red);}
@@ -715,11 +715,12 @@ function onPhoto(p,input){
 function dlPhoto(p){
   const blob=S.blobs[p]; if(!blob){toast('写真がありません','err');return;}
   const ext=blob.type.includes('png')?'png':'jpg';
-  const name=photoBaseName(p)+'.'+ext;
+  const base=photoBaseName(p);
+  const name=base+'.'+ext;
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=name; a.click();
   URL.revokeObjectURL(url);
-  toast('「'+name+'」を保存','ok');
+  toast('「'+name+'」を保存しました。後で「'+base+'.webp」に変換してアップロードしてください','ok',5000);
 }
 
 // =========================================================
@@ -1033,10 +1034,10 @@ function lsj(k,v){
 function setSt(id,msg,cls){const e=document.getElementById(id);e.className='st-msg show '+cls;e.textContent=msg;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 let tT;
-function toast(msg,type=''){
+function toast(msg,type='',dur=3000){
   const e=document.getElementById('toast');
   e.textContent=msg; e.className='toast show'+(type?' '+type:'');
-  clearTimeout(tT); tT=setTimeout(()=>{e.className='toast';},3000);
+  clearTimeout(tT); tT=setTimeout(()=>{e.className='toast';},dur);
 }
 init();
 </script>
