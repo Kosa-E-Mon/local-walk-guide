@@ -1632,6 +1632,14 @@ function deriveAudioUrl(id, role) {
   return role ? `${base}/${id}_${role}.mp3` : `${base}/${id}.mp3`;
 }
 
+// 導出URLのファイルが実在する場合のみフィールドに設定する(既に値があれば何もしない)
+function setIfExists(obj, key, url) {
+  if (!url || obj[key]) return;
+  fetch(url, { method: 'HEAD' })
+    .then(res => { if (res.ok) obj[key] = url; })
+    .catch(() => {});
+}
+
 function applyUrlConventions() {
   allSpots.forEach(function(s) {
     s.photo_url          = s.photo_url          || derivePhotoUrl(s.spot_id);
@@ -1641,11 +1649,15 @@ function applyUrlConventions() {
     s.audio_next_url     = s.audio_next_url     || deriveAudioUrl(s.spot_id, 'next');
     s.audio_goal_url     = s.audio_goal_url     || deriveAudioUrl(s.spot_id, 'goal');
   });
-  // コースのテーマ/完走音声は導出しない: audio_theme_url の有無が
-  // 「テーマを流すか caution(注意喚起)を流すか」の分岐に使われるため、
-  // 存在しないURLを導出すると caution がスキップされてしまう
+  // コースの音声(テーマ/完走/説明)は「ファイルが実在する場合のみ」導出URLを採用する。
+  // audio_theme_url の有無が「テーマを流すか caution(注意喚起)を流すか」の分岐に、
+  // course_audio_url の有無が説明ボタン表示に使われるため、404のURLを無条件に
+  // 入れると注意喚起スキップや無音ボタンが起きる。HEADで実在確認してから採用する
   allCourses.forEach(function(c) {
     c.course_thumbnail_url = c.course_thumbnail_url || derivePhotoUrl(c.course_id);
+    setIfExists(c, 'audio_theme_url',  deriveAudioUrl(c.course_id, 'start'));
+    setIfExists(c, 'audio_finish_url', deriveAudioUrl(c.course_id, 'goal'));
+    setIfExists(c, 'course_audio_url', deriveAudioUrl(c.course_id, 'intro'));
   });
   allFacilities.forEach(function(f) {
     f.photo_url = f.photo_url || derivePhotoUrl(f.facility_id);
