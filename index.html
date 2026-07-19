@@ -1641,10 +1641,11 @@ function applyUrlConventions() {
     s.audio_next_url     = s.audio_next_url     || deriveAudioUrl(s.spot_id, 'next');
     s.audio_goal_url     = s.audio_goal_url     || deriveAudioUrl(s.spot_id, 'goal');
   });
+  // コースのテーマ/完走音声は導出しない: audio_theme_url の有無が
+  // 「テーマを流すか caution(注意喚起)を流すか」の分岐に使われるため、
+  // 存在しないURLを導出すると caution がスキップされてしまう
   allCourses.forEach(function(c) {
     c.course_thumbnail_url = c.course_thumbnail_url || derivePhotoUrl(c.course_id);
-    c.audio_theme_url      = c.audio_theme_url      || deriveAudioUrl(c.course_id, 'start');
-    c.audio_finish_url     = c.audio_finish_url     || deriveAudioUrl(c.course_id, 'goal');
   });
   allFacilities.forEach(function(f) {
     f.photo_url = f.photo_url || derivePhotoUrl(f.facility_id);

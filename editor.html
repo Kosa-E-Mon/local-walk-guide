@@ -808,9 +808,9 @@ const COURSE_FIELDS = [
   {key:'course_notes',            lbl:'コース注意メモ',               desc:'紹介画面の注意欄に表示', w:260},
   {key:'start_date',              lbl:'公開開始日',                   desc:'YYYY-MM-DD（空白=常時）'},
   {key:'end_date',                lbl:'公開終了日',                   desc:'YYYY-MM-DD（空白=常時）'},
-  {key:'audio_theme_url',         lbl:'テーマナレーション音声URL',    desc:'コース開始時に流れる音声。空欄なら {course_id}_start.mp3 を自動使用', type:'audio'},
+  {key:'audio_theme_url',         lbl:'テーマナレーション音声URL',    desc:'コース開始時に流れる音声。空欄なら注意喚起(caution)が流れる。自動導出の対象外・URLを直接記入', type:'audio'},
   {key:'theme_text',              lbl:'テーマナレーション テキスト',  desc:'音声がない場合に読み上げ'},
-  {key:'audio_finish_url',        lbl:'完走音声URL',                  desc:'ゴール到達時に流れる音声（なければTTS）。空欄なら {course_id}_goal.mp3 を自動使用', type:'audio'},
+  {key:'audio_finish_url',        lbl:'完走音声URL',                  desc:'ゴール到達時に流れる音声（なければTTS）。自動導出の対象外・URLを直接記入', type:'audio'},
   {key:'finish_text',             lbl:'完走テキスト',                 desc:'ゴール時に読み上げるテキスト（音声URLがない場合に使用）'},
 ];
 
@@ -1824,7 +1824,7 @@ function renderRecordForm(sn,schema,rows,origRows,body){
 // GitHub Pages 上にファイルが実在するか HEAD リクエストで確認する。
 const MEDIA_RULES={
   spots:{photo_url:['photo',''],audio_approach_url:['audio','approach'],audio_arrive_url:['audio','arrive'],audio_start_url:['audio','start'],audio_next_url:['audio','next'],audio_goal_url:['audio','goal']},
-  courses:{course_thumbnail_url:['photo',''],audio_theme_url:['audio','start'],audio_finish_url:['audio','goal']},
+  courses:{course_thumbnail_url:['photo','']},
   facilities:{photo_url:['photo',''],audio_url:['audio',null]},
 };
 function mediaRepoBase(kind){
