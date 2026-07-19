@@ -201,7 +201,9 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 .audit-sum .ok{color:var(--green);font-weight:700;}
 .audit-sum .ng{color:var(--accent);font-weight:700;}
 .audit-grp{margin-bottom:12px;}
-.audit-grp-name{font-size:12px;font-weight:700;margin-bottom:4px;}
+.audit-grp-name{font-size:12px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.audit-edit{font-size:10px;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:1px 7px;cursor:pointer;white-space:nowrap;}
+.audit-edit:hover{background:var(--accent);color:#fff;}
 .audit-files{font-family:var(--mono);font-size:10px;line-height:1.9;color:var(--accent);word-break:break-all;padding-left:12px;}
 .audit-files .opt{color:var(--dim);}
 .audit-files [data-fn]{cursor:pointer;}
@@ -1951,14 +1953,14 @@ async function runMediaAudit(){
   notify('メディアを一括チェック中…');
   const jobs=[];
   const collect=(sn,rows,idKey,nameKey,groupLbl)=>{
-    (rows||[]).forEach(r=>{
+    (rows||[]).forEach((r,rowIdx)=>{
       const id=(r[idKey]||'').trim(); if(!id)return;
       Object.keys(MEDIA_RULES[sn]).forEach(col=>{
         const explicit=(r[col]||'').trim();
         const url=explicit||mediaDerivedUrl(sn,col,id);
         if(!url)return;
         const txtCol=AUDIT_TXT_COL[col];
-        jobs.push({group:`${groupLbl} ${r[nameKey]||''}（${id}）`, col, url,
+        jobs.push({group:`${groupLbl} ${r[nameKey]||''}（${id}）`, sn, rowIdx, col, url,
           script: txtCol?(r[txtCol]||'').trim():'',
           isAudio: !!txtCol,
           badFormat: explicit&&!/^https?:\/\//.test(explicit)});
@@ -1980,6 +1982,7 @@ async function runMediaAudit(){
   const ov=document.createElement('div'); ov.className='audit-ov';
   ov.onclick=e=>{if(e.target===ov)ov.remove();};
   const grpHtml=Object.entries(groups).map(([g,items])=>{
+    const first=items[0];
     const files=items.map(r=>{
       const fn=r.url.split('/').pop();
       const opt=AUDIT_OPTIONAL.has(r.col);
@@ -1991,7 +1994,8 @@ async function runMediaAudit(){
       }
       return `<div class="${opt?'opt':''}" data-fn="${esc(fn)}" title="クリックでファイル名をコピー">✗ ${esc(fn)}（${esc(AUDIT_ROLE_LBL[r.col]||r.col)}${opt?'・任意':''}${r.note?'・'+r.note:''}）${scriptHtml}</div>`;
     }).join('');
-    return `<div class="audit-grp"><div class="audit-grp-name">${esc(g)}</div><div class="audit-files">${files}</div></div>`;
+    const editBtn=`<span class="audit-edit" data-edit-sn="${esc(first.sn)}" data-edit-idx="${first.rowIdx}" title="この項目の編集画面へ移動">✏ 編集へ</span>`;
+    return `<div class="audit-grp"><div class="audit-grp-name">${esc(g)}${editBtn}</div><div class="audit-files">${files}</div></div>`;
   }).join('');
   // 音声生成メモ(configのtts_*)を先頭パネルに常時表示。貼付用の行はクリックでコピー
   const ttsScene=String(getCfg('tts_scene')||'').trim();
@@ -2009,12 +2013,28 @@ async function runMediaAudit(){
     else legacy();
   };
   ov.addEventListener('click',e=>{
+    const ed=e.target.closest('[data-edit-sn]');
+    if(ed){ov.remove();jumpToEdit(ed.dataset.editSn,parseInt(ed.dataset.editIdx));return;}
     const s=e.target.closest('[data-script]');
     if(s){copyFn(s.dataset.script);return;}
     const d=e.target.closest('[data-fn]');
     if(d) copyFn(d.dataset.fn);
   });
   document.body.appendChild(ov);
+}
+
+// 一括チェックから該当項目の編集画面へジャンプ
+function jumpToEdit(sn, idx){
+  if(sn==='spots'||sn==='facilities'){
+    tableViewMode[sn]='form';           // フォーム表示に
+    selectedRow[sn]=idx;                // 対象行を選択
+    showTab(sn);
+  }else if(sn==='courses'){
+    selectedRow.courses=state.courses[idx]?.course_id||null;
+    showTab('courses');
+  }
+  // 画面上部へスクロール
+  document.querySelector('.ed-body')?.scrollTo({top:0,behavior:'smooth'});
 }
 
 const ID_FIELD_KEYS=['spot_id','course_id','facility_id'];
