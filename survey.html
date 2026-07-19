@@ -996,7 +996,8 @@ function showTab(tab){
 // UTILITIES
 // =========================================================
 async function fetchGviz(sid,sheet){
-  const r=await fetch('https://docs.google.com/spreadsheets/d/'+sid+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(sheet));
+  // headers=1: gvizの型推定による複数行ヘッダー巻き込みを防ぐ(本体index.htmlと同じ対策)
+  const r=await fetch('https://docs.google.com/spreadsheets/d/'+sid+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(sheet)+'&headers=1');
   if(!r.ok) throw new Error('シート取得失敗: '+sheet);
   return (await r.text()).replace(/^\uFEFF/,'');
 }
