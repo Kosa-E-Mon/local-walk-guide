@@ -215,9 +215,12 @@ select.c-in{-webkit-appearance:none;cursor:pointer;}
 .ttsmemo-row{font-size:12px;line-height:1.9;cursor:pointer;border-radius:4px;padding:2px 6px;word-break:break-word;}
 .ttsmemo-row:hover{background:var(--gold);color:#fff;}
 .ttsmemo-row b{font-weight:700;}
-.ttsmemo-row.empty{cursor:default;color:var(--dim);}
-.ttsmemo-row.empty:hover{background:transparent;color:var(--dim);}
-.ttsmemo-row.empty span{font-weight:400;}
+.ttsmemo-row.empty,.ttsmemo-row.plain{cursor:default;}
+.ttsmemo-row.empty:hover,.ttsmemo-row.plain:hover{background:transparent;color:inherit;}
+.ttsmemo-row.empty{color:var(--dim);}
+.ttsmemo-row.empty span,.ttsmemo-row.plain span{font-weight:400;color:var(--dim);}
+.ttsmemo-copy{font-size:10px;color:var(--gold);font-weight:700;margin-left:6px;white-space:nowrap;}
+.ttsmemo-row:hover .ttsmemo-copy{color:#fff;}
 .audit-empty{text-align:center;color:var(--green);font-weight:700;font-size:13px;padding:24px 0;}
 .record-empty{display:flex;align-items:center;justify-content:center;min-height:240px;color:var(--dim);font-size:12px;text-align:center;}
 @media(max-width:900px){.record-view{grid-template-columns:170px minmax(0,1fr)}.record-form-grid{grid-template-columns:1fr}.record-field.wide{grid-column:auto}}
@@ -720,9 +723,9 @@ const CONFIG_DEFS = [
   {key:'photo_repo', lbl:'写真リポジトリ', desc:'「ユーザー名/リポジトリ名」形式（URLではない）。設定すると空欄の写真URLを {ID}.webp の命名規則で自動導出。例: kosa-e-mon/local-walk-guide-photo'},
   {key:'audio_repo', lbl:'音声リポジトリ', desc:'「ユーザー名/リポジトリ名」形式（URLではない）。設定すると空欄の音声URLを {ID}_役割.mp3 の命名規則で自動導出。例: kosa-e-mon/local-walk-guide-audio'},
   {sec:'🎙 音声生成メモ（AI Studio）'},
-  {key:'tts_style_prompt', lbl:'スタイル指示文', desc:'AI Studioの音声生成に貼るスタイル指示。一括チェック画面からワンクリックでコピーできる。例: 落ち着いたドキュメンタリー番組・街歩き番組のナレーションのように、ゆっくり丁寧に読んでください'},
-  {key:'tts_voice_male',   lbl:'男性ボイス名メモ', desc:'採用した男性ボイスの名前と担当をメモ（「あれ？誰にしたっけ？」防止）。例: Charon（接近・出発・次へ・注意喚起を担当）'},
-  {key:'tts_voice_female', lbl:'女性ボイス名メモ', desc:'採用した女性ボイスの名前と担当をメモ。例: Kore（到着・解説を担当）'},
+  {key:'tts_scene',          lbl:'Scene（貼付用）',          desc:'AI Studioの「Scene」欄にそのまま貼り付ける文面。一括チェック画面からワンクリックでコピーできる。例: 落ち着いたドキュメンタリー番組・街歩き番組のナレーション'},
+  {key:'tts_sample_context', lbl:'Sample Context（貼付用）', desc:'AI Studioの「Sample Context」欄にそのまま貼り付ける文面。ワンクリックでコピーできる'},
+  {key:'tts_speakers',       lbl:'よく使う話者',              desc:'よく使う話者を手入力でメモ（「あれ？誰にしたっけ？」防止）。例: 男性=Charon（接近・出発・次へ・注意喚起）／女性=Kore（到着・解説）'},
   {sec:'🎨 カラー設定'},
   {key:'color_bg',      lbl:'背景色',               desc:'画面全体の背景 (--bg)。例: #F4EFE4', type:'color'},
   {key:'color_paper',   lbl:'カード背景色',         desc:'カード・白い領域 (--paper)。例: #FAF7F1', type:'color'},
@@ -1990,14 +1993,15 @@ async function runMediaAudit(){
     }).join('');
     return `<div class="audit-grp"><div class="audit-grp-name">${esc(g)}</div><div class="audit-files">${files}</div></div>`;
   }).join('');
-  // 音声生成メモ(configのtts_*)を先頭パネルに常時表示。各行クリックでコピー
-  const stylePrompt=String(getCfg('tts_style_prompt')||'').trim();
-  const voiceMale=String(getCfg('tts_voice_male')||'').trim();
-  const voiceFemale=String(getCfg('tts_voice_female')||'').trim();
-  const memoRow=(icon,label,val)=> val
-    ? `<div class="ttsmemo-row" data-script="${esc(val)}" title="クリックでコピー">${icon} <b>${label}：</b>${esc(val)}</div>`
+  // 音声生成メモ(configのtts_*)を先頭パネルに常時表示。貼付用の行はクリックでコピー
+  const ttsScene=String(getCfg('tts_scene')||'').trim();
+  const ttsSampleContext=String(getCfg('tts_sample_context')||'').trim();
+  const ttsSpeakers=String(getCfg('tts_speakers')||'').trim();
+  const memoCopyRow=(icon,label,val)=> val
+    ? `<div class="ttsmemo-row" data-script="${esc(val)}" title="クリックでコピー → AI Studioの「${label}」欄に貼り付け">${icon} <b>${label}：</b>${esc(val)} <span class="ttsmemo-copy">📋 コピー</span></div>`
     : `<div class="ttsmemo-row empty">${icon} <b>${label}：</b><span>未設定（CONFIGの「🎙 音声生成メモ」で登録できます）</span></div>`;
-  const memoHtml=`<div class="ttsmemo"><div class="ttsmemo-head">🎙 音声生成メモ</div>${memoRow('🗣','スタイル指示',stylePrompt)}${memoRow('👨','男性ボイス',voiceMale)}${memoRow('👩','女性ボイス',voiceFemale)}</div>`;
+  const memoPlainRow=(icon,label,val)=> `<div class="ttsmemo-row plain">${icon} <b>${label}：</b>${val?esc(val):'<span>未設定（CONFIGの「🎙 音声生成メモ」で登録できます）</span>'}</div>`;
+  const memoHtml=`<div class="ttsmemo"><div class="ttsmemo-head">🎙 音声生成メモ（クリックでコピー→AI Studioの各欄へ貼り付け）</div>${memoCopyRow('🎬','Scene',ttsScene)}${memoCopyRow('💬','Sample Context',ttsSampleContext)}${memoPlainRow('🗣','よく使う話者',ttsSpeakers)}</div>`;
   ov.innerHTML=`<div class="audit-box"><div class="audit-head">🔍 メディア一括チェック結果<div class="spacer"></div><button class="btn btn-o btn-sm" onclick="window.open('https://aistudio.google.com/generate-speech','_blank')">🎙 音声作成 (AI Studio)</button><button class="btn btn-o btn-sm" onclick="this.closest('.audit-ov').remove()">閉じる</button></div><div class="audit-body">${memoHtml}<div class="audit-sum"><span class="ok">✓ ${okCount}件 OK</span>　<span class="ng">✗ ${missing.length}件 未アップロード</span>（全${results.length}件を確認）<br><small>ファイル名をクリックするとコピーできます。その名前でアップロードすれば、シートに触れず自動で反映されます。灰色は任意項目です。音声はAI Studioで生成→「⇧ メディア変換」でアップロードできます。</small></div>${missing.length?grpHtml:'<div class="audit-empty">🎉 すべてのメディアが揃っています</div>'}</div></div>`;
   const copyFn=t=>{
     const legacy=()=>{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');notify('コピーしました: '+t,'ok');}catch(e){}ta.remove();};
