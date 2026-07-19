@@ -743,7 +743,9 @@ async function submitSpot(){
     audio_start_url:'', audio_approach_url:'', audio_arrive_url:'',
     audio_next_url:'', audio_goal_url:'',
     description:'', keywords:'',
-    photo_url:fn?fn+'.jpg':'',
+    // photo_urlは書き込まない: 空欄なら {spot_id}.webp が自動導出される。
+    // 撮影した写真は端末に保存→webp変換→アップロードの流れ(仮の.jpg名を書くと導出を上書きして壊す)
+    photo_url:'',
   };
   if(editing){
     const idx=S.spots.findIndex(r=>r.spot_id===S.edit.id);
@@ -778,7 +780,8 @@ async function submitFac(){
     audio_url:'',
     start_date:document.getElementById('f-start').value,
     end_date:document.getElementById('f-end').value,
-    photo_url:fn?fn+'.jpg':'',
+    // photo_urlは書き込まない: 空欄なら {facility_id}.webp が自動導出される(仮の.jpg名は導出を壊す)
+    photo_url:'',
   };
   if(editing){
     const idx=S.facilities.findIndex(r=>r.facility_id===S.edit.id);
