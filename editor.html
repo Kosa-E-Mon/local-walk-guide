@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>まち歩きガイド — データエディタ v4</title>
+<title>まちあるきガイド — エディター</title>
+<link rel="stylesheet" href="editor-ui.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -765,13 +766,16 @@ function gasTokenStorageKey(){
   // 旧形式(シート横断で1個だけ)のトークンが既にあれば、このシート用として引き継ぐ(既存デプロイのトークンを無効化しないため)
   if (!localStorage.getItem(key)) {
     const old = localStorage.getItem('lwg_editor_gas_token');
-    if (old) localStorage.setItem(key, old);
+    if (old && !localStorage.getItem('lwg_editor_legacy_token_migrated')) {
+      localStorage.setItem(key, old);
+      localStorage.setItem('lwg_editor_legacy_token_migrated', sid);
+    }
   }
   return key;
 }
 function getGasToken(){
   const key = gasTokenStorageKey();
-  let t = localStorage.getItem(key);
+  let t = document.getElementById('gas-token')?.value.trim() || localStorage.getItem(key);
   if (!t) {
     t = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('');
     localStorage.setItem(key, t);
@@ -779,7 +783,7 @@ function getGasToken(){
   return t;
 }
 function buildGasCode(){
-  return GAS_CODE_TEMPLATE.replace('__TOKEN__', getGasToken());
+  return GAS_CODE_TEMPLATE.replace("'__TOKEN__'", JSON.stringify(getGasToken()));
 }
 
 // ═══════════════════════════════════════════════════════
@@ -871,10 +875,17 @@ const CONFIG_DEFS = [
   {key:'walk_speed_hits', lbl:'乗り物判定の連続回数', desc:'停止速度超過が何回続いたら乗り物モードにするか。例: 2', type:'num'},
   {key:'walk_accuracy_max_m', lbl:'歩行加算GPS最大誤差', desc:'GPS精度がこのm数より悪い時は歩行距離に加算しません。例: 50', type:'num'},
   {key:'walk_segment_max_m', lbl:'歩行加算最大区間距離', desc:'1回のGPS更新でこのm数以上動いた場合はワープ扱いで加算しません。例: 50', type:'num'},
+  {sec:'🎁 記念カード'},
+  {key:'card_label', lbl:'カードの名称', desc:'例: クラカード。空欄なら記念カード'},
+  {key:'card_message', lbl:'カード獲得メッセージ', desc:'例: クラカードをゲットしました！'},
+  {key:'card_image_url', lbl:'共通カード画像URL（任意）', desc:'通常は空欄。写真リポジトリ内の {spot_id}_spcard.webp を自動使用。全スポット共通の画像で上書きしたい場合だけ指定'},
   {sec:'🏅 修了証画面'},
+  {key:'cert_image_url', lbl:'完歩記念画像URL', desc:'オリジナル修了証やイベント記念画像。従来の修了証と一緒に表示。空欄は非表示'},
+  {key:'cert_image_id', lbl:'完歩記念画像ID', desc:'写真リポジトリ内の {このID}_spcard.webp を表示。URL入力不要。IDとURLの両方が空欄なら非表示'},
   {key:'cert_award_title', lbl:'修了証タイトル',     desc:'賞状の大見出し。例: 修了証　（デフォルト: 修了証）'},
   {key:'cert_issuer',      lbl:'発行者名',            desc:'賞状の発行者欄。例: 増田町観光協会（area_nameがフォールバック）'},
   {key:'cert_seal_text',   lbl:'印鑑テキスト',        desc:'印鑑（丸印）に表示するテキスト。例: 増田\n観光'},
+  {key:'cert_seal_svg_url',lbl:'印鑑SVG URL',         desc:'GitHub Pages等のSVG直接URL。入力時は印鑑テキストより優先'},
   {key:'cert_body_text',   lbl:'本文追加テキスト',    desc:'賞状本文に付け加えるテキスト。例: 今後もまち歩きをお楽しみください。'},
   {key:'cert_title_font_family',     lbl:'賞状タイトルフォント',   desc:'--cert-title-font-family。例: Yuji Syuku'},
   {key:'cert_title_font_size',       lbl:'賞状タイトルサイズ',     desc:'--cert-title-font-size。例: 32px'},
@@ -894,6 +905,7 @@ const CONFIG_DEFS = [
 ];
 
 const COURSE_FIELDS = [
+  {key:'test_mode', lbl:'テスト用コース', desc:'TRUEは先行・テスト版だけに表示。空欄/FALSEは正式版にも表示。ID変更は不要', type:'bool'},
   {key:'course_id',               lbl:'コースID',                     desc:'一意の識別子。小文字英数字と _ のみ（例: rekishi_01）', w:140},
   {key:'course_name',             lbl:'コース名',                     desc:'画面に表示される名前', w:150},
   {key:'course_type',             lbl:'コースタイプ',                 desc:'注意アナウンスの種別', w:80, type:'sel', opts:['市街地','公園','混在']},
@@ -915,6 +927,8 @@ const COURSE_FIELDS = [
 
 const SCHEMAS = {
   spots:[
+    {key:'card_image_url', lbl:'記念カード画像URL（任意）', desc:'通常は空欄。写真リポジトリの {spot_id}_spcard.webp を自動使用。コースの巡回順で有効化する', w:220},
+    {key:'card_title', lbl:'記念カードタイトル', desc:'空欄ならスポット名。街の説明は従来どおり表示', w:180},
     {key:'spot_id',            lbl:'スポットID',              desc:'一意の識別子。小文字英数字と _ のみ（例: manpukuji）', w:140},
     {key:'spot_name',          lbl:'スポット名',              desc:'画面・音声に使われる名称', w:150},
     {key:'lat',                lbl:'緯度',                    desc:'例: 39.319826', w:95},
@@ -961,18 +975,24 @@ let leafletMap=null, mapLayerGroup=null;
 let selectedRow={courses:null, spots:null, facilities:null};
 let mapEditContext=null;
 let navGuardReady=false;
-const tableViewMode={spots:'table',facilities:'table'};
+const tableViewMode={spots:'form',facilities:'form'};
 
 // ═══════════════════════════════════════════════════════
 // CSV / UTILITIES
 // ═══════════════════════════════════════════════════════
 
 function parseCSV(text){
-  const rows=[]; const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
-  if(lines.length<2) return rows;
-  const headers=splitL(lines[0]);
-  for(let i=1;i<lines.length;i++){const ln=lines[i];if(!ln.trim())continue;const vals=splitL(ln),obj={};headers.forEach((h,x)=>{obj[h.trim()]=(vals[x]||'').trim();});rows.push(obj);}
-  return rows;
+  const records=[];let record=[],cell='',quoted=false;
+  const csv=text.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  for(let i=0;i<csv.length;i++){
+    const c=csv[i];
+    if(c==='"'){if(quoted&&csv[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}
+    else if(!quoted&&(c===','||c==='\n')){record.push(cell);cell='';if(c==='\n'){records.push(record);record=[];}}
+    else cell+=c;
+  }
+  if(cell||record.length){record.push(cell);records.push(record);}
+  const headers=records.shift()||[];
+  return records.filter(r=>r.some(v=>v.trim())).map(r=>Object.fromEntries(headers.map((h,i)=>[h.trim(),(r[i]??'').trim()])));
 }
 function splitL(line){const r=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){r.push(cur);cur='';}else cur+=c;}r.push(cur);return r;}
 function esc(v){const s=String(v??'');return(s.includes(',')||s.includes('"')||s.includes('\n'))?`"${s.replace(/"/g,'""')}"`  :s;}
@@ -1003,11 +1023,11 @@ async function loadData(){
   const raw=document.getElementById('sheet-url').value.trim();
   const sid=parseSheetId(raw);
   if(!sid){notify('スプレッドシートのURLまたはIDを確認してください',true);return;}
-  state.sheetId=sid;
   showLd('データを読み込んでいます…'); setStat('loading','読み込み中…');
   try{
     const sheets=['config','courses','spots','course_spots','facilities'];
     const csvs=await Promise.all(sheets.map(s=>fetchGviz(sid,s)));
+    state.sheetId=sid;
     sheets.forEach((s,i)=>{state[s]=parseCSV(csvs[i]);});
     state.config=cleanConfigRows(state.config);
     state.originals={};
@@ -1016,12 +1036,13 @@ async function loadData(){
     state.loaded=true;
     updateBadges(); showTab(currentTab);
     // このシート用に保存済みの書き込みトークンがあれば反映(無ければ空のまま。地域を切り替えたときに前のシートのトークンを誤って使わないように)
-    const savedToken=localStorage.getItem(gasTokenStorageKey());
+    const savedToken=document.getElementById('gas-token').value.trim();
     document.getElementById('gas-token').value=savedToken||'';
     state.gasToken=savedToken||null;
     setStat('ok',`読み込み完了 ✓ — コース:${state.courses.length} / スポット:${state.spots.length} / コース構成:${state.course_spots.length} / 施設:${state.facilities.length}`);
     notify('読み込み完了しました ✓');
-  }catch(e){console.error(e);setStat('error',e.message);notify(e.message,true);}
+    return true;
+  }catch(e){console.error(e);setStat('error',e.message);notify(e.message,true);return false;}
   finally{hideLd();}
 }
 
@@ -1114,10 +1135,20 @@ async function saveCurrentSheet(){
     }
     // Re-read after short delay
     await new Promise(r=>setTimeout(r,2200));
-    const allSheets=currentTab==='courses'?['courses','course_spots']:[currentTab];
+    const allSheets=sheetsToSave;
+    const verified={};
     for(const s of allSheets){
       const csv=await fetchGviz(state.sheetId,s);
-      state[s]=parseCSV(csv);
+      const actual=parseCSV(csv);
+      const expected=s==='config'?cleanConfigRows(state[s]):state[s];
+      const normal=v=>String(v??'').replace(/\r\n/g,'\n').trim();
+      if(actual.length!==expected.length||expected.some((row,i)=>Object.keys(row).some(k=>normal(row[k])!==normal(actual[i]?.[k])))){
+        throw new Error('「'+s+'」の保存結果をまだ確認できません。編集中の内容は保持しています。トークン・GAS設定を確認し、少し待って再度保存してください');
+      }
+      verified[s]=actual;
+    }
+    for(const s of allSheets){
+      state[s]=verified[s];
       state.originals[s]=dc(state[s]);
       changes[s]={};
       document.getElementById('dot-'+s)?.classList.remove('show');
@@ -1139,7 +1170,7 @@ function recChg(sheet,k,oldV,newV){
   if(sheet===currentTab) updateChgBadge(sheet);
 }
 function hasUnsavedChanges(){
-  return Object.values(changes).some(sheetChanges=>Object.keys(sheetChanges||{}).length>0);
+  return state.loaded && ['config','courses','course_spots','spots','facilities'].some(s=>JSON.stringify(state[s])!==JSON.stringify(state.originals[s]));
 }
 function installNavigationGuard(){
   if(navGuardReady) return;
@@ -1450,8 +1481,11 @@ function renderCertPreview(rp,c){
   issuer.style.cssText='font-size:11px;align-self:flex-end;margin-right:10px;';
 
   const seal=document.createElement('div');
-  seal.textContent=getCfg('cert_seal_text')||'修了';
+  const sealSvgUrl=getCfg('cert_seal_svg_url');
+  if(sealSvgUrl){const img=document.createElement('img');img.src=driveUrl(sealSvgUrl);img.alt='印鑑';img.style.cssText='width:100%;height:100%;object-fit:contain;';seal.appendChild(img);}
+  else seal.textContent=getCfg('cert_seal_text')||'修了';
   seal.style.cssText=`position:absolute;right:18px;bottom:18px;width:${getCfg('cert_seal_size')||'64px'};height:${getCfg('cert_seal_size')||'64px'};border-radius:50%;border:${getCfg('cert_seal_border_width')||'2px'} solid ${getCfg('cert_seal_border_color')||c.primary};background:${getCfg('cert_seal_bg')||'transparent'};color:${getCfg('cert_seal_text_color')||c.primary};font-family:'${getCfg('cert_seal_font_family')||'serif'}';font-size:${getCfg('cert_seal_text_size')||'12px'};line-height:${getCfg('cert_seal_line_height')||'1.5'};display:flex;align-items:center;justify-content:center;white-space:pre-line;`;
+  if(sealSvgUrl){seal.style.border='none';seal.style.background='transparent';}
 
   cert.appendChild(award); cert.appendChild(name); cert.appendChild(text); cert.appendChild(issuer); cert.appendChild(seal);
   body.appendChild(cert); phone.appendChild(notch); phone.appendChild(body);
@@ -1541,8 +1575,11 @@ function renderCertPreview(rp,c){
   issuer.textContent=getCfg('cert_issuer')||getCfg('area_name')||c.title;
   issuer.style.cssText='font-size:13px;color:#2A1A0A;letter-spacing:.08em;line-height:1.7;text-align:right;';
   const seal=document.createElement('div');
-  seal.textContent=getCfg('cert_seal_text')||'修了';
+  const sealSvgUrl=getCfg('cert_seal_svg_url');
+  if(sealSvgUrl){const img=document.createElement('img');img.src=driveUrl(sealSvgUrl);img.alt='印鑑';img.style.cssText='width:100%;height:100%;object-fit:contain;';seal.appendChild(img);}
+  else seal.textContent=getCfg('cert_seal_text')||'修了';
   seal.style.cssText=`width:${getCfg('cert_seal_size')||'60px'};height:${getCfg('cert_seal_size')||'60px'};border-radius:50%;border:${getCfg('cert_seal_border_width')||'3px'} double ${getCfg('cert_seal_border_color')||c.primary};background:${getCfg('cert_seal_bg')||'rgba(184,50,50,.04)'};color:${getCfg('cert_seal_text_color')||c.primary};font-family:'${getCfg('cert_seal_font_family')||'serif'}';font-size:${getCfg('cert_seal_text_size')||'10px'};line-height:${getCfg('cert_seal_line_height')||'1.4'};display:flex;align-items:center;justify-content:center;text-align:center;white-space:pre-line;`;
+  if(sealSvgUrl){seal.style.border='none';seal.style.background='transparent';}
   const footer=document.createElement('div');
   footer.style.cssText='display:flex;justify-content:flex-end;align-items:center;gap:14px;padding-top:10px;border-top:1px solid #D4C9B0;margin-bottom:20px;';
   footer.appendChild(issuer); footer.appendChild(seal);
@@ -1738,7 +1775,7 @@ function renderCourses(){
         const inp=document.createElement('input'); inp.type='text'; inp.className='cc-field-in'+(val!==origVal?' chg':''); inp.value=val;
         let mTimer=null;
         inp.addEventListener('input',()=>{course[col.key]=inp.value;inp.classList.toggle('chg',inp.value!==origVal);recChg('courses',chgKey,origVal,inp.value);if(mRefresh){clearTimeout(mTimer);mTimer=setTimeout(mRefresh,600);}});
-        row.appendChild(inp); row.appendChild(mkPlayBtn(()=>inp.value,col.lbl));
+        row.appendChild(inp); row.appendChild(mkPlayBtn(()=>mediaPlaybackUrl('courses',col.key,course.course_id,inp.value),col.lbl));
         f.appendChild(row);
         const mRefresh=attachMediaCheck('courses',col.key,()=>course.course_id,()=>inp.value,f);
         if(mRefresh) mediaRefreshers.push(mRefresh);
@@ -1836,7 +1873,13 @@ function renderSpotsList(courseId, container){
       const idx=state.course_spots.findIndex(c2=>c2===cs);
       if(idx>=0){state.course_spots.splice(idx,1);recChg('course_spots',`${courseId}:${cs.spot_id}:削除`,cs.spot_id,'（削除）');renderSpotsList(courseId,container);refreshCourseMapAfterEdit(courseId);}
     };
-    row.appendChild(num); row.appendChild(info); row.appendChild(dist); row.appendChild(upBtn); row.appendChild(dnBtn); row.appendChild(rmBtn);
+    const cardLabel=document.createElement('label');cardLabel.textContent='🎁 カード ';
+    const cardToggle=document.createElement('select');cardToggle.className='cfg-in';cardToggle.style.width='auto';cardToggle.setAttribute('aria-label',`カード獲得: ${spot?spot.spot_name:cs.spot_id}`);
+    [['','未設定（なし）'],['FALSE','OFF'],['TRUE','ON']].forEach(([v,label])=>{const o=document.createElement('option');o.value=v;o.textContent=label;o.selected=String(cs.card_enabled||'').toUpperCase()===v;cardToggle.appendChild(o);});
+    const original=cs.card_enabled||'';
+    cardToggle.onchange=()=>{cs.card_enabled=cardToggle.value;recChg('course_spots',`${courseId}:${cs.spot_id}:カード`,original,cs.card_enabled);};
+    cardLabel.appendChild(cardToggle);
+    row.appendChild(num); row.appendChild(info); row.appendChild(dist); row.appendChild(cardLabel); row.appendChild(upBtn); row.appendChild(dnBtn); row.appendChild(rmBtn);
     container.appendChild(row);
   });
   if(courseSpots.length===0){
@@ -1949,7 +1992,7 @@ function renderRecordForm(sn,schema,rows,origRows,body){
 // URL列が空欄のとき {ID}_{役割} 規約で導出されるURLを表示し、
 // GitHub Pages 上にファイルが実在するか HEAD リクエストで確認する。
 const MEDIA_RULES={
-  spots:{photo_url:['photo',''],audio_approach_url:['audio','approach'],audio_arrive_url:['audio','arrive'],audio_start_url:['audio','start'],audio_next_url:['audio','next'],audio_goal_url:['audio','goal']},
+  spots:{photo_url:['photo',''],card_image_url:['photo','spcard'],audio_approach_url:['audio','approach'],audio_arrive_url:['audio','arrive'],audio_start_url:['audio','start'],audio_next_url:['audio','next'],audio_goal_url:['audio','goal']},
   courses:{course_thumbnail_url:['photo',''],audio_theme_url:['audio','start'],audio_finish_url:['audio','goal'],course_audio_url:['audio','intro']},
   facilities:{photo_url:['photo',''],audio_url:['audio',null]},
 };
@@ -1961,12 +2004,19 @@ function mediaRepoBase(kind){
   return `https://${parts[0]}.github.io/${parts[1]}`;
 }
 function mediaDerivedUrl(sn,colKey,id){
+  if(colKey==='card_image_url'&&getCfg('card_image_url'))return String(getCfg('card_image_url')).trim();
   const rule=(MEDIA_RULES[sn]||{})[colKey];
   if(!rule||!id)return null;
   const base=mediaRepoBase(rule[0]);
   if(!base)return null;
-  if(rule[0]==='photo')return `${base}/${id}.webp`;
+  if(rule[0]==='photo')return `${base}/${id}${rule[1]?'_'+rule[1]:''}.webp`;
   return rule[1]?`${base}/${id}_${rule[1]}.mp3`:`${base}/${id}.mp3`;
+}
+// URL欄が空欄でも、自動命名された音声ファイルを再生できるようにする。
+// 明示URLがある場合は、従来どおり明示URLを優先する。
+function mediaPlaybackUrl(sn,colKey,id,explicit){
+  const value=String(explicit||'').trim();
+  return value||mediaDerivedUrl(sn,colKey,String(id||'').trim());
 }
 const urlExistCache=new Map();
 function checkUrlExists(url){
@@ -2013,12 +2063,12 @@ function scheduleMediaRefreshAll(){
 
 // ═══ メディア一括チェック: 全スポット/コース/施設の写真・音声の実在をまとめて確認 ═══
 const AUDIT_ROLE_LBL={
-  photo_url:'写真', audio_approach_url:'接近', audio_arrive_url:'到着',
+  photo_url:'写真', card_image_url:'記念カード', audio_approach_url:'接近', audio_arrive_url:'到着',
   audio_start_url:'出発', audio_next_url:'次へ', audio_goal_url:'ゴール',
   course_thumbnail_url:'サムネイル', audio_theme_url:'テーマ',
   audio_finish_url:'完走', course_audio_url:'説明', audio_url:'音声',
 };
-const AUDIT_OPTIONAL=new Set(['audio_theme_url','audio_finish_url','course_audio_url']);
+const AUDIT_OPTIONAL=new Set(['audio_theme_url','audio_finish_url','course_audio_url','card_image_url']);
 // 音声URL列 → 対応する原稿テキスト列(AI Studio等で音声生成する際にコピーできるように)
 const AUDIT_TXT_COL={
   audio_approach_url:'audio_approach_txt', audio_arrive_url:'audio_arrive_txt',
@@ -2175,7 +2225,7 @@ function makeRecordField(sn,row,origRow,idx,col,title,listItems,rows){
   runIdCheck();
 
   if(col.type==='audio'){
-    const audioRow=document.createElement('div');audioRow.className='record-audio-row';audioRow.appendChild(el);audioRow.appendChild(mkPlayBtn(()=>el.value,col.lbl));field.appendChild(audioRow);
+    const audioRow=document.createElement('div');audioRow.className='record-audio-row';audioRow.appendChild(el);audioRow.appendChild(mkPlayBtn(()=>mediaPlaybackUrl(sn,col.key,row[rowIdKey],el.value),col.lbl));field.appendChild(audioRow);
   }else field.appendChild(el);
   if(idMsg) field.appendChild(idMsg);
   const rowIdKey=sn==='spots'?'spot_id':'facility_id';
@@ -2236,7 +2286,7 @@ function mkRow(sn,schema,row,origRow,idx){
       if(col.w)el.style.minWidth=(col.w-85)+'px';
       el.title=isChg?`変更前: ${origVal||'（空）'}`:col.desc||'';
       el.addEventListener('input',()=>{row[col.key]=el.value;const c=el.value!==origVal;td.classList.toggle('chg',c);recChg(sn,chgKey,origVal,el.value);syncMapFromEditedRow(sn,idx);});
-      wr.appendChild(el);wr.appendChild(mkPlayBtn(()=>el.value,col.lbl));td.appendChild(wr);
+      wr.appendChild(el);wr.appendChild(mkPlayBtn(()=>mediaPlaybackUrl(sn,col.key,row[sn==='spots'?'spot_id':'facility_id'],el.value),col.lbl));td.appendChild(wr);
     }else if(col.type==='bool'){
       const el=document.createElement('select');el.className='c-in';
       bindCellMeta(el,sn,idx,col.key,origVal);
@@ -2644,7 +2694,7 @@ function exportCurrentSheet(){
 function exportSheet(sn){
   let csv;
   if(sn==='config') csv='key,value\n'+cleanConfigRows(state.config).map(r=>`${esc(r.key||'')},${esc(r.value||'')}`).join('\n');
-  else{const sc=SCHEMAS[sn]||(sn==='courses'?COURSE_FIELDS:null)||(sn==='course_spots'?[{key:'course_id'},{key:'spot_id'},{key:'order'}]:null);if(!sc)return;csv=buildCSV(sc.map(c=>c.key),state[sn]);}
+  else{const sc=SCHEMAS[sn]||(sn==='courses'?COURSE_FIELDS:null)||(sn==='course_spots'?[{key:'course_id'},{key:'spot_id'},{key:'order'},{key:'card_enabled'}]:null);if(!sc)return;csv=buildCSV([...new Set([...sc.map(c=>c.key),...state[sn].flatMap(r=>Object.keys(r))])],state[sn]);}
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=sn+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);
@@ -2663,6 +2713,7 @@ function exportAll(){
 // ═══════════════════════════════════════════════════════
 
 function showGasModal(){
+  if(!parseSheetId(document.getElementById('sheet-url').value)){notify('先にスプレッドシートのURLまたはIDを入力してください',true);return;}
   const token=getGasToken();
   document.getElementById('gas-code-display').textContent=buildGasCode();
   document.getElementById('gas-token-display').textContent=token;
@@ -2677,7 +2728,7 @@ async function copyGasCode(){
   catch(e){notify('コピーに失敗しました。手動でコードを選択してコピーしてください',true);}
 }
 
-const APP_BASE_URL = 'https://kosa-e-mon.github.io/machi-aruki-guide/';
+const APP_BASE_URL = 'https://kosa-e-mon.github.io/local-walk-guide/';
 
 function buildQrTargetUrl(){
   const raw=(document.getElementById('qr-sheet-url')?.value||'').trim();
@@ -2779,12 +2830,10 @@ function notify(m,err){const el=document.getElementById('notif');el.textContent=
 window.addEventListener('DOMContentLoaded',()=>{
   installNavigationGuard();
   showTab('config');
-  document.getElementById('gas-code-display').textContent=buildGasCode();
-  const savedToken=localStorage.getItem(gasTokenStorageKey());
-  if(savedToken){ document.getElementById('gas-token').value=savedToken; state.gasToken=savedToken; }
   initResizeHandle();
   initEditorSize();
   initPreviewPan();
+  initEditorWorkspace();
 });
 document.getElementById('gas-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeGasModal();});
 document.getElementById('diff-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDiffModal();});
@@ -3122,5 +3171,6 @@ function loadGoogleFont(name){
 }
 
 </script>
+<script src="editor-ui.js"></script>
 </body>
 </html>
