@@ -158,6 +158,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);max-width:48
 .toast.err{background:var(--red);}
 .form-end{height:24px;}
 </style>
+<link rel="stylesheet" href="survey-course.css">
 </head>
 <body>
 <div class="hdr">
@@ -503,10 +504,11 @@ function startWatch(){
   pill.className='gps-pill searching'; txt.textContent='取得中…';
   navigator.geolocation.watchPosition(pos=>{
     uLat=pos.coords.latitude; uLng=pos.coords.longitude;
+    window.SurveyTracker?.sample(pos);
     const acc=Math.round(pos.coords.accuracy);
     pill.className='gps-pill active'; txt.textContent='±'+acc+'m';
     ['s','f'].forEach(p=>{updUMark(p);updDist(p);});
-  },()=>{pill.className='gps-pill';txt.textContent='GPS失敗';},{enableHighAccuracy:true,maximumAge:3000});
+  },err=>{window.SurveyTracker?.error(err);pill.className='gps-pill';txt.textContent='GPS失敗';},{enableHighAccuracy:true,maximumAge:3000});
 }
 
 function getGPS(p){
@@ -984,7 +986,7 @@ function clearData(type){
 // NAVIGATION
 // =========================================================
 function showTab(tab){
-  ['spot','fac','hist','sett'].forEach(t=>{
+  ['spot','fac','course','hist','sett'].forEach(t=>{
     document.getElementById('screen-'+t).classList.toggle('active',t===tab);
     document.getElementById('tab-'+t).classList.toggle('active',t===tab);
   });
@@ -1041,5 +1043,7 @@ function toast(msg,type='',dur=3000){
 }
 init();
 </script>
+<script src="survey-tracker.js"></script>
+<script src="survey-course.js"></script>
 </body>
 </html>
